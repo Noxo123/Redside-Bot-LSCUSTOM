@@ -1,27 +1,60 @@
-# Redside Bot — LSCUSTOM
+# Redside Bot — LS CUSTOM / Redside RP
 
-Bot Discord de recrutement avec dashboard web connecté à Discord et SQLite.
+Portail web + bot Discord pour centraliser les recrutements, candidatures, tickets, VIP LIST et partenariats de LS CUSTOM.
+
+## Architecture
+
+**Le site est le produit principal. Discord est la couche de liaison.**
+
+- Joueurs : site public, formulaires, espace de suivi Discord
+- Staff : dashboard web authentifié par Discord OAuth2
+- Bot : publications, notifications et commandes d'administration
+- SQLite : données, paramètres et journal d'audit
 
 ## Fonctionnalités
 
-- 🔐 Connexion dashboard via Discord OAuth2
-- 🏢 Sélection des serveurs où l’utilisateur possède `Gérer le serveur`
-- 📊 Statistiques : recrutements, ouverts, candidatures, en attente, acceptées, refusées
-- 📋 Création et historique des recrutements
-- 🟢 Ouverture / 🔴 fermeture des recrutements
-- 📢 Publication directe dans un salon Discord
-- 🖼️ Upload d’image depuis le dashboard (PNG/JPG/WebP/GIF, 8 Mo) et envoi comme pièce jointe Discord
-- 🔗 Image par URL
-- 📝 Bouton `Postuler` + formulaire Discord (modal)
-- 📨 Stockage SQLite des candidatures
-- 👀 Consultation des candidatures depuis Discord et dashboard
-- ✅ / ❌ Acceptation ou refus depuis le dashboard
-- 🧾 Salon de logs
-- ⚙️ Configuration par serveur
-- 🛡️ Contrôle d’accès côté API par serveur
-- 📝 Journal d’audit des actions
-- 📱 Dashboard responsive
-- 💾 SQLite avec WAL
+### Joueurs
+
+- 🏠 Portail public LS CUSTOM
+- 📋 Liste des recrutements ouverts
+- 🧾 Formulaires de candidature dynamiques
+- ❓ Questions personnalisées par recrutement
+- 📎 Pièces jointes (images/PDF, jusqu'à 5 fichiers de 8 Mo)
+- 🔐 Connexion Discord joueur
+- 📊 `/suivi` pour retrouver ses candidatures et tickets
+- 🤝 Demandes de partenariat entreprise
+- ⭐ Demandes VIP LIST
+- 🛠️ Tickets support
+- 📎 Pièces jointes sur les tickets
+- 🖥️ Statut FiveM optionnel via `FIVEM_SERVER_URL`
+- 📰 Actualité et description publiques configurables
+
+### Staff
+
+- 🔐 Discord OAuth2 + contrôle des serveurs où l'utilisateur possède `Gérer le serveur` ou `Administrateur`
+- 📊 Vue générale et statistiques
+- 📋 Gestion complète des recrutements
+- 📢 Publication Discord avec bouton vers le site
+- 🟢 Ouverture / 🔴 fermeture
+- 📝 Questions personnalisées
+- 📨 Candidatures avec filtres et pièces jointes
+- ✅ Acceptation / ❌ refus / ⏳ attente
+- 🔔 Notification Discord du changement de statut + DM au candidat quand son identifiant Discord est valide
+- 🎫 Gestion des tickets
+- 🤝 Partenariats et ⭐ VIP LIST dans le même centre de tickets
+- 🧾 Journal d'audit
+- ⚙️ Configuration Discord + contenu public
+- 📱 Interface responsive
+
+### Sécurité / robustesse
+
+- Les routes publiques sont verrouillées sur `DEFAULT_GUILD_ID`.
+- Les APIs staff vérifient l'accès au serveur dans la session OAuth.
+- Rate limit public basique par IP.
+- Upload limité à 8 Mo par fichier et aux images/PDF.
+- URLs d'images distantes obligatoirement en HTTPS.
+- SQLite en WAL.
+- Les actions staff importantes sont auditées.
 
 ## Installation
 
@@ -31,35 +64,55 @@ copy .env.example .env
 npm start
 ```
 
+## Variables `.env`
+
+```env
+DISCORD_TOKEN=
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+DISCORD_REDIRECT_URI=http://localhost:3000/auth/callback
+PLAYER_REDIRECT_URI=http://localhost:3000/auth/player/callback
+SESSION_SECRET=change-me
+PORT=3000
+BASE_URL=http://localhost:3000
+DEFAULT_GUILD_ID=
+FIVEM_SERVER_URL=
+FIVEM_MAX_PLAYERS=48
+```
+
+`PLAYER_REDIRECT_URI` doit être déclaré dans le Discord Developer Portal. Si elle est absente, le projet utilise automatiquement `${BASE_URL}/auth/player/callback`.
+
 ## Discord Developer Portal
 
-Créer une application Discord, récupérer le token, le Client ID et le Client Secret.
+Déclarer les deux redirect URIs :
 
-Dans OAuth2, ajouter exactement l’URL définie dans `DISCORD_REDIRECT_URI`, par exemple :
+- `http://localhost:3000/auth/callback`
+- `http://localhost:3000/auth/player/callback`
 
-`http://localhost:3000/auth/callback`
+En production, utiliser le domaine HTTPS réel.
 
-Le bot doit être invité avec les permissions nécessaires pour voir/envoyer des messages dans le salon de recrutement et le salon de logs.
-
-## Variables
-
-Voir `.env.example`.
-
-`SESSION_SECRET` doit être une valeur aléatoire longue en production.
+Le bot doit pouvoir lire et envoyer des messages dans les salons configurés.
 
 ## Dashboard
 
-Ouvrir `http://localhost:3000`, puis se connecter avec Discord.
+Ouvrir `http://localhost:3000/admin`.
 
-Le serveur doit être accessible depuis le navigateur et, pour une utilisation publique, passer derrière HTTPS avec un vrai domaine. En production, utiliser une vraie session store (Redis par exemple) plutôt que le MemoryStore d’Express.
+Le staff se connecte avec Discord. Seuls les serveurs où son compte possède `Gérer le serveur` ou `Administrateur` sont proposés.
 
-## Structure
+Dans **Configuration**, renseigner :
 
-- `src/bot.js` — commandes, boutons, modals et publication Discord
-- `src/dashboard.js` — OAuth2, API REST et dashboard
-- `src/db.js` — SQLite et modèle de données
-- `src/index.js` — démarrage
-- `public/` — interface web
+- salon des recrutements
+- salon des logs
+- salon des tickets
+- rôle recruteur (réservé pour les évolutions de permissions)
+- actualité publique
+- description du serveur
+
+## FiveM
+
+Pour activer le statut serveur, définir `FIVEM_SERVER_URL` vers l'URL HTTP de l'endpoint FiveM, par exemple une adresse accessible qui expose `/players.json`.
+
+Le dashboard et le portail indiquent alors si le serveur est en ligne et le nombre de joueurs.
 
 ## Commandes Discord
 
@@ -68,6 +121,26 @@ Le serveur doit être accessible depuis le navigateur et, pour une utilisation p
 - `/config`
 - `/candidatures`
 
-## Évolution prévue
+Le bot ne remplace pas les formulaires du site : les joueurs candidatent et créent leurs demandes depuis le portail web.
 
-Le socle est volontairement modulaire pour ajouter ensuite : modèles de recrutements, questions configurables par recrutement, notifications DM, rôles automatiques, planification, export CSV, recherche/filtrage avancé, pagination, embeds personnalisables, statistiques détaillées et système multi-staff.
+## Structure
+
+- `src/bot.js` — Discord, publications et notifications
+- `src/dashboard.js` — serveur web, OAuth2 et API
+- `src/db.js` — SQLite, données et audit
+- `src/index.js` — démarrage
+- `public/portal.*` — portail joueur
+- `public/recrutement.*` — formulaire de candidature
+- `public/tracking.*` — espace de suivi joueur
+- `public/app.*` — dashboard staff
+
+## Production
+
+Pour une vraie mise en ligne :
+
+1. HTTPS obligatoire.
+2. `SESSION_SECRET` long et aléatoire.
+3. Utiliser un vrai session store (Redis, etc.) plutôt que le MemoryStore Express.
+4. Sauvegarder `data/redside.sqlite` et `data/uploads`.
+5. Placer le site derrière un reverse proxy.
+6. Vérifier les permissions Discord du bot et les redirect URIs OAuth2.
