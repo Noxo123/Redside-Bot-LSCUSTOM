@@ -58,7 +58,15 @@ app.get('/api/public/tracking',playerAuth,(req,res)=>{const g=publicGuildId();re
 
 app.get('/api/guilds/:guildId/stats',auth,(req,res)=>allowed(req,req.params.guildId)?res.json(stats(req.params.guildId)):res.sendStatus(403));
 app.get('/api/guilds/:guildId/recruitments',auth,(req,res)=>allowed(req,req.params.guildId)?res.json(getRecruitments(req.params.guildId,req.query.status||null)):res.sendStatus(403));
-app.get('/api/guilds/:guildId/applications',auth,(req,res)=>{if(!allowed(req,req.params.guildId))return res.sendStatus(403);const applications=getApplications(req.params.guildId,req.query.status||null).map(a=>({...a,answers:parseJson(a.answers_json,{}),attachments:parseJson(a.attachments_json,[])}));res.json(applications)});
+app.get('/api/guilds/:guildId/applications',auth,(req,res)=>{
+  if(!allowed(req,req.params.guildId)) return res.sendStatus(403);
+  const applications=getApplications(req.params.guildId,req.query.status||null).map(a=>({
+    ...a,
+    answers:parseJson(a.answers_json,{}),
+    attachments:parseJson(a.attachments_json,[])
+  }));
+  res.json(applications);
+});
 app.get('/api/guilds/:guildId/tickets',auth,(req,res)=>{if(!allowed(req,req.params.guildId))return res.sendStatus(403);res.json(getTickets(req.params.guildId,req.query.status||null).map(t=>({...t,details:parseJson(t.details_json,{}),attachments:parseJson(t.attachments_json,[])})))});
 app.get('/api/guilds/:guildId/audit',auth,(req,res)=>allowed(req,req.params.guildId)?res.json(getAuditLogs(req.params.guildId,req.query.limit)):res.sendStatus(403));
 app.post('/api/guilds/:guildId/tickets/:id/status',auth,(req,res)=>{const g=req.params.guildId;if(!allowed(req,g))return res.sendStatus(403);if(!['open','closed','pending'].includes(req.body.status))return res.status(400).json({error:'invalid status'});const t=setTicketStatus(Number(req.params.id),g,req.body.status);if(!t)return res.status(404).json({error:'Ticket introuvable'});audit(g,req.session.user.id,'ticket.status',`${t.id}:${req.body.status}`);res.json(t)});
