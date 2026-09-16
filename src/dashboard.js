@@ -8,6 +8,7 @@ import db,{getRecruitments,getRecruitment,createRecruitment,createApplication,ha
 
 app.get('/api/guilds/:guildId/applications',auth,(req,res)=>{
   if(!allowed(req,req.params.guildId))return res.sendStatus(403);
+
   const applications=getApplications(
     req.params.guildId,
     req.query.status||null
@@ -16,5 +17,6 @@ app.get('/api/guilds/:guildId/applications',auth,(req,res)=>{
     answers:parseJson(a.answers_json,{}),
     attachments:parseJson(a.attachments_json,[])
   }));
+
   res.json(applications);
 });
