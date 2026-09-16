@@ -6,5 +6,4 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import db,{getRecruitments,getRecruitment,createRecruitment,createApplication,hasRecentApplication,getApplications,getApplicationsForUser,updateApplication,getSetting,setSetting,stats,audit,getAuditLogs,createTicket,getTickets,getTicketsForUser,setTicketStatus,setRecruitmentStatus} from './db.js';
 
-// Syntax fix: the admin applications ternary now closes res.json() correctly.
-app.get('/api/guilds/:guildId/applications',auth,(req,res)=>allowed(req,req.params.guildId)?res.json(getApplications(req.params.guildId,req.query.status||null).map(a=>({...a,answers:parseJson(a.answers_json,{}),attachments:parseJson(a.attachments_json,[])}))):res.sendStatus(403));
+app.get('/api/guilds/:guildId/applications',auth,(req,res)=>allowed(req,req.params.guildId)?res.json(getApplications(req.params.guildId,req.query.status||null).map(a=>({...a,answers:parseJson(a.answers_json,{}),attachments:parseJson(a.attachments_json,[]}))):res.sendStatus(403));
