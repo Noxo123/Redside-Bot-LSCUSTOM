@@ -8,9 +8,10 @@ const commands=[
  new SlashCommandBuilder().setName('recrutement').setDescription('Gérer les recrutements').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
   .addSubcommand(s=>s.setName('ouvrir').setDescription('Ouvrir un recrutement').addStringOption(o=>o.setName('titre').setDescription('Titre').setRequired(true)).addStringOption(o=>o.setName('description').setDescription('Description').setRequired(true)).addStringOption(o=>o.setName('image').setDescription('URL de l’image').setRequired(false)))
   .addSubcommand(s=>s.setName('fermer').setDescription('Fermer un recrutement').addIntegerOption(o=>o.setName('id').setDescription('ID').setRequired(true))),
- new SlashCommandBuilder().setName('config').setDescription('Configurer le bot').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+ new SlashCommandBuilder().setName('config').setDescription('Configurer la liaison site/Discord').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
   .addStringOption(o=>o.setName('recrutement-channel').setDescription('Salon de publication').setRequired(false))
-  .addStringOption(o=>o.setName('logs-channel').setDescription('Salon des logs').setRequired(false)),
+  .addStringOption(o=>o.setName('logs-channel').setDescription('Salon des logs').setRequired(false))
+  .addStringOption(o=>o.setName('tickets-channel').setDescription('Salon de liaison des tickets').setRequired(false)),
  new SlashCommandBuilder().setName('candidatures').setDescription('Voir les candidatures').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
 ].map(x=>x.toJSON());
 
@@ -26,12 +27,18 @@ function waitForReady(timeout=15000){
  return readyPromise;
 }
 
+async function fetchTextChannel(guild,id){
+ if(!id)return null;
+ const ch=await guild.channels.fetch(id).catch(()=>null);
+ return ch?.isTextBased()?ch:null;
+}
+
 async function publishRecruitment(guild,r){
  const channelId=getSetting(guild.id,'recruitment_channel');
  if(!channelId) throw new Error('Aucun salon de recrutement configuré. Utilise /config ou le dashboard.');
- const channel=await guild.channels.fetch(channelId).catch(()=>null);
- if(!channel?.isTextBased()) throw new Error('Le salon de recrutement configuré est introuvable ou non textuel.');
- const embed=new EmbedBuilder().setTitle(`📋 ${r.title}`).setDescription(r.description).setColor(0x5865f2).setFooter({text:`Recrutement #${r.id} • Redside`}).setTimestamp(new Date(r.created_at));
+ const channel=await fetchTextChannel(guild,channelId);
+ if(!channel) throw new Error('Le salon de recrutement configuré est introuvable ou non textuel.');
+ const embed=new EmbedBuilder().setTitle(`📋 ${r.title}`).setDescription(r.description).setColor(0xf5a623).setFooter({text:`LS CUSTOM • Recrutement #${r.id}`}).setTimestamp(new Date(r.created_at));
  const files=[];
  if(r.image_path && fs.existsSync(r.image_path)){
   const name=`recruitment-${r.id}-${Date.now()}.png`;
@@ -49,6 +56,44 @@ export async function publishFromDashboard(guildId,r){
  return publishRecruitment(guild,r);
 }
 
+export async function notifyWebsiteApplication(application,recruitment){
+ await waitForReady();
+ const guild=client.guilds.cache.get(application.guild_id) || await client.guilds.fetch(application.guild_id).catch(()=>null);
+ if(!guild)return null;
+ const channel=await fetchTextChannel(guild,getSetting(guild.id,'logs_channel')||getSetting(guild.id,'tickets_channel'));
+ if(!channel)return null;
+ let answers={}; try{answers=JSON.parse(application.answers_json||'{}')}catch{}
+ const embed=new EmbedBuilder().setTitle('📨 Nouvelle candidature — site web').setColor(0xf5a623).setDescription(`**${recruitment?.title||`Recrutement #${application.recruitment_id}`}**`)
+  .addFields(
+   {name:'Référence',value:`LSC-${String(application.id).padStart(5,'0')}`,inline:true},
+   {name:'Nom',value:String(answers.nom||'—'),inline:true},
+   {name:'Prénom',value:String(answers.prenom||'—'),inline:true},
+   {name:'RP ID',value:String(answers.rp_id||'—'),inline:true},
+   {name:'Âge',value:String(answers.age||'—'),inline:true},
+   {name:'Discord',value:String(answers.discord_id||'—'),inline:true},
+   {name:'Motivation',value:String(answers.motivation||'—').slice(0,1024)},
+   {name:'Expérience',value:String(answers.experience||'—').slice(0,1024)}
+  ).setTimestamp();
+ return channel.send({embeds:[embed]});
+}
+
+export async function notifyWebsiteTicket(ticket){
+ await waitForReady();
+ const guild=client.guilds.cache.get(ticket.guild_id) || await client.guilds.fetch(ticket.guild_id).catch(()=>null);
+ if(!guild)return null;
+ const channel=await fetchTextChannel(guild,getSetting(guild.id,'tickets_channel')||getSetting(guild.id,'logs_channel'));
+ if(!channel)return null;
+ let details={}; try{details=JSON.parse(ticket.details_json||'{}')}catch{}
+ const labels={partnership:'🤝 Partenariat entreprise',vip:'⭐ VIP LIST',support:'🛠️ Support'};
+ const lines=Object.entries(details).filter(([,v])=>v).slice(0,12).map(([k,v])=>({name:k.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase()),value:String(v).slice(0,1024)}));
+ const embed=new EmbedBuilder().setTitle(`${labels[ticket.type]||'🎫 Ticket'} — ${ticket.subject}`).setColor(0xf5a623).addFields(
+  {name:'Référence',value:`LSC-T-${String(ticket.id).padStart(5,'0')}`,inline:true},
+  {name:'Demandeur',value:String(ticket.username||'Visiteur'),inline:true},
+  ...lines
+ ).setTimestamp();
+ return channel.send({embeds:[embed]});
+}
+
 client.once('ready',()=>{
  console.log(`🤖 Connecté : ${client.user.tag} | ${client.guilds.cache.size} serveur(s)`);
  for(const guild of client.guilds.cache.values()) upsertGuild(guild);
@@ -59,9 +104,9 @@ client.on('interactionCreate',async i=>{try{
  if(i.isChatInputCommand()){
   upsertGuild(i.guild);
   if(i.commandName==='config'){
-   const rc=i.options.getString('recrutement-channel'); const lc=i.options.getString('logs-channel');
-   if(rc)setSetting(i.guildId,'recruitment_channel',rc); if(lc)setSetting(i.guildId,'logs_channel',lc);
-   return i.reply({content:'✅ Configuration enregistrée.',ephemeral:true});
+   const rc=i.options.getString('recrutement-channel'); const lc=i.options.getString('logs-channel'); const tc=i.options.getString('tickets-channel');
+   if(rc)setSetting(i.guildId,'recruitment_channel',rc); if(lc)setSetting(i.guildId,'logs_channel',lc); if(tc)setSetting(i.guildId,'tickets_channel',tc);
+   return i.reply({content:'✅ Configuration de la liaison enregistrée.',ephemeral:true});
   }
   if(i.commandName==='recrutement'){
    if(i.options.getSubcommand()==='ouvrir'){
