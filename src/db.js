@@ -1,32 +1,23 @@
 import Database from 'better-sqlite3';
-import fs from 'node:fs';
-import path from 'node:path';
-
-fs.mkdirSync('data', { recursive: true });
-const db = new Database(path.join('data', 'redside.sqlite'));
-db.pragma('journal_mode = WAL');
-db.exec(`
-CREATE TABLE IF NOT EXISTS guilds (id TEXT PRIMARY KEY, name TEXT, recruitment_channel_id TEXT, log_channel_id TEXT, applications_channel_id TEXT, updated_at TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS recruitments (id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL, image_url TEXT, status TEXT NOT NULL DEFAULT 'open', created_by TEXT NOT NULL, created_at TEXT NOT NULL, closed_at TEXT);
-CREATE TABLE IF NOT EXISTS applications (id INTEGER PRIMARY KEY AUTOINCREMENT, recruitment_id INTEGER NOT NULL, guild_id TEXT NOT NULL, user_id TEXT NOT NULL, username TEXT NOT NULL, answers_json TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', reviewer_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS settings (guild_id TEXT NOT NULL, key TEXT NOT NULL, value TEXT, PRIMARY KEY(guild_id,key));
-CREATE TABLE IF NOT EXISTS audit_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id TEXT NOT NULL, actor_id TEXT, action TEXT NOT NULL, details TEXT, created_at TEXT NOT NULL);
-`);
-
-export function upsertGuild(guild) {
-  db.prepare(`INSERT INTO guilds(id,name,updated_at) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,updated_at=excluded.updated_at`).run(guild.id, guild.name, new Date().toISOString());
-}
-export function getRecruitments(guildId, status = null) {
-  return status ? db.prepare('SELECT * FROM recruitments WHERE guild_id=? AND status=? ORDER BY id DESC').all(guildId,status) : db.prepare('SELECT * FROM recruitments WHERE guild_id=? ORDER BY id DESC').all(guildId);
-}
-export function getRecruitment(id, guildId) { return db.prepare('SELECT * FROM recruitments WHERE id=? AND guild_id=?').get(id,guildId); }
-export function createRecruitment(data) { const r=db.prepare('INSERT INTO recruitments(guild_id,title,description,image_url,status,created_by,created_at) VALUES(?,?,?,?,?,?,?)').run(data.guildId,data.title,data.description,data.imageUrl||null,'open',data.createdBy,new Date().toISOString()); return getRecruitment(r.lastInsertRowid,data.guildId); }
-export function setRecruitmentStatus(id,guildId,status) { db.prepare('UPDATE recruitments SET status=?,closed_at=CASE WHEN ?="closed" THEN ? ELSE closed_at END WHERE id=? AND guild_id=?').run(status,status,new Date().toISOString(),id,guildId); return getRecruitment(id,guildId); }
-export function createApplication(data) { const now=new Date().toISOString(); const r=db.prepare('INSERT INTO applications(recruitment_id,guild_id,user_id,username,answers_json,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)').run(data.recruitmentId,data.guildId,data.userId,data.username,JSON.stringify(data.answers||{}),'pending',now,now); return db.prepare('SELECT * FROM applications WHERE id=?').get(r.lastInsertRowid); }
-export function getApplications(guildId, status=null) { return status ? db.prepare('SELECT * FROM applications WHERE guild_id=? AND status=? ORDER BY id DESC').all(guildId,status) : db.prepare('SELECT * FROM applications WHERE guild_id=? ORDER BY id DESC').all(guildId); }
-export function updateApplication(id,guildId,status,reviewerId) { db.prepare('UPDATE applications SET status=?,reviewer_id=?,updated_at=? WHERE id=? AND guild_id=?').run(status,reviewerId,new Date().toISOString(),id,guildId); return db.prepare('SELECT * FROM applications WHERE id=? AND guild_id=?').get(id,guildId); }
-export function getSetting(guildId,key,fallback=null) { return db.prepare('SELECT value FROM settings WHERE guild_id=? AND key=?').get(guildId,key)?.value ?? fallback; }
-export function setSetting(guildId,key,value) { db.prepare('INSERT INTO settings(guild_id,key,value) VALUES(?,?,?) ON CONFLICT(guild_id,key) DO UPDATE SET value=excluded.value').run(guildId,key,String(value)); }
-export function audit(guildId,actorId,action,details='') { db.prepare('INSERT INTO audit_logs(guild_id,actor_id,action,details,created_at) VALUES(?,?,?,?,?)').run(guildId,actorId,action,details,new Date().toISOString()); }
-export function stats(guildId) { return { recruitments:getRecruitments(guildId).length, open:getRecruitments(guildId,'open').length, applications:getApplications(guildId).length, pending:getApplications(guildId,'pending').length, accepted:getApplications(guildId,'accepted').length, rejected:getApplications(guildId,'rejected').length }; }
+import fs from 'node:fs'; import path from 'node:path';
+fs.mkdirSync('data',{recursive:true});
+const db=new Database(path.join('data','redside.sqlite')); db.pragma('journal_mode = WAL');
+db.exec(`CREATE TABLE IF NOT EXISTS guilds (id TEXT PRIMARY KEY,name TEXT,recruitment_channel_id TEXT,log_channel_id TEXT,applications_channel_id TEXT,updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS recruitments (id INTEGER PRIMARY KEY AUTOINCREMENT,guild_id TEXT NOT NULL,title TEXT NOT NULL,description TEXT NOT NULL,image_url TEXT,image_path TEXT,status TEXT NOT NULL DEFAULT 'open',created_by TEXT NOT NULL,created_at TEXT NOT NULL,closed_at TEXT);
+CREATE TABLE IF NOT EXISTS applications (id INTEGER PRIMARY KEY AUTOINCREMENT,recruitment_id INTEGER NOT NULL,guild_id TEXT NOT NULL,user_id TEXT NOT NULL,username TEXT NOT NULL,answers_json TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',reviewer_id TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS settings (guild_id TEXT NOT NULL,key TEXT NOT NULL,value TEXT,PRIMARY KEY(guild_id,key));
+CREATE TABLE IF NOT EXISTS audit_logs (id INTEGER PRIMARY KEY AUTOINCREMENT,guild_id TEXT NOT NULL,actor_id TEXT,action TEXT NOT NULL,details TEXT,created_at TEXT NOT NULL);`);
+try{db.exec('ALTER TABLE recruitments ADD COLUMN image_path TEXT')}catch(e){if(!String(e.message).includes('duplicate column'))throw e}
+export function upsertGuild(g){db.prepare(`INSERT INTO guilds(id,name,updated_at) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,updated_at=excluded.updated_at`).run(g.id,g.name,new Date().toISOString())}
+export function getRecruitments(guildId,status=null){return status?db.prepare('SELECT * FROM recruitments WHERE guild_id=? AND status=? ORDER BY id DESC').all(guildId,status):db.prepare('SELECT * FROM recruitments WHERE guild_id=? ORDER BY id DESC').all(guildId)}
+export function getRecruitment(id,guildId){return db.prepare('SELECT * FROM recruitments WHERE id=? AND guild_id=?').get(id,guildId)}
+export function createRecruitment(d){const r=db.prepare('INSERT INTO recruitments(guild_id,title,description,image_url,image_path,status,created_by,created_at) VALUES(?,?,?,?,?,?,?,?)').run(d.guildId,d.title,d.description,d.imageUrl||null,d.imagePath||null,'open',d.createdBy,new Date().toISOString());return getRecruitment(r.lastInsertRowid,d.guildId)}
+export function setRecruitmentStatus(id,guildId,status){db.prepare('UPDATE recruitments SET status=?,closed_at=CASE WHEN ?="closed" THEN ? ELSE closed_at END WHERE id=? AND guild_id=?').run(status,status,new Date().toISOString(),id,guildId);return getRecruitment(id,guildId)}
+export function createApplication(d){const now=new Date().toISOString();const r=db.prepare('INSERT INTO applications(recruitment_id,guild_id,user_id,username,answers_json,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)').run(d.recruitmentId,d.guildId,d.userId,d.username,JSON.stringify(d.answers||{}),'pending',now,now);return db.prepare('SELECT * FROM applications WHERE id=?').get(r.lastInsertRowid)}
+export function getApplications(guildId,status=null){return status?db.prepare('SELECT * FROM applications WHERE guild_id=? AND status=? ORDER BY id DESC').all(guildId,status):db.prepare('SELECT * FROM applications WHERE guild_id=? ORDER BY id DESC').all(guildId)}
+export function updateApplication(id,guildId,status,reviewerId){db.prepare('UPDATE applications SET status=?,reviewer_id=?,updated_at=? WHERE id=? AND guild_id=?').run(status,reviewerId,new Date().toISOString(),id,guildId);return db.prepare('SELECT * FROM applications WHERE id=? AND guild_id=?').get(id,guildId)}
+export function getSetting(guildId,key,fallback=null){return db.prepare('SELECT value FROM settings WHERE guild_id=? AND key=?').get(guildId,key)?.value??fallback}
+export function setSetting(guildId,key,value){db.prepare('INSERT INTO settings(guild_id,key,value) VALUES(?,?,?) ON CONFLICT(guild_id,key) DO UPDATE SET value=excluded.value').run(guildId,key,String(value))}
+export function audit(guildId,actorId,action,details=''){db.prepare('INSERT INTO audit_logs(guild_id,actor_id,action,details,created_at) VALUES(?,?,?,?,?)').run(guildId,actorId,action,details,new Date().toISOString())}
+export function stats(guildId){return{recruitments:getRecruitments(guildId).length,open:getRecruitments(guildId,'open').length,applications:getApplications(guildId).length,pending:getApplications(guildId,'pending').length,accepted:getApplications(guildId,'accepted').length,rejected:getApplications(guildId,'rejected').length}}
 export default db;
