@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LS CUSTOM — Organisation</title>
+<link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/organisation.css">
+</head>
+<body>
+<div class="shell">
+<aside>
+<div class="brand"><span class="brand-mark">LS</span><div><b>LS CUSTOM</b><small>Redside RP • Organisation</small></div></div>
+<div id="user" class="user-card"></div>
+<label class="guild-label">Serveur<select id="guild"></select></label>
+<nav>
+<a class="org-nav active" href="#dashboard">⌂ <span>Vue d'ensemble</span></a>
+<a class="org-nav" href="#hierarchy">♜ <span>Hiérarchie</span></a>
+<a class="org-nav" href="#employees">♙ <span>Employés</span></a>
+<a class="org-nav" href="#quotas">◈ <span>Quotas</span></a>
+<a class="org-nav" href="#partnerships">🤝 <span>Partenariats</span></a>
+<a class="org-nav" href="/admin">← <span>Administration</span></a>
+</nav>
+<a class="logout" href="/auth/logout" onclick="event.preventDefault();fetch('/auth/logout',{method:'POST'}).then(()=>location.href='/organisation')">Déconnexion</a>
+</aside>
+<main>
+<header><div><p class="eyebrow">LS CUSTOM • REDSIDE RP</p><h1 id="title">Organisation</h1></div><a class="public-link" href="/" target="_blank">Voir le site ↗</a></header>
+<section id="content"></section>
+</main>
+</div>
+<div id="notify"></div>
+<script src="/organisation.js"></script>
+</body>
+</html>
