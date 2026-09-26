@@ -4,7 +4,7 @@ import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import db,{getRecruitments,getRecruitment,createRecruitment,createApplication,hasRecentApplication,getApplications,getApplicationsForUser,updateApplication,getSetting,setSetting,stats,audit,getAuditLogs,createTicket,getTickets,getTicketsForUser,setTicketStatus,setRecruitmentStatus} from './db.js';
+import db,{getRecruitments,getRecruitment,createRecruitment,createApplication,hasRecentApplication,getApplications,getApplicationsForUser,updateApplication,getSetting,setSetting,stats,audit,getAuditLogs,createTicket,getTickets,getTicketsForUser,setTicketStatus,setRecruitmentStatus,consumeLoginCode,createAbsence,getAbsence,getAbsences,getAbsencesForUser,deleteAbsence} from './db.js';
 import {publishFromDashboard,notifyWebsiteApplication,notifyWebsiteApplicationStatus,notifyWebsiteTicket} from './bot.js';
 
 const app=express();
@@ -42,10 +42,17 @@ app.get('/api/public/me',(req,res)=>res.json({user:req.session.player||null}));
 
 app.get('/',(req,res)=>res.sendFile(path.resolve('public/portal.html')));
 app.get('/suivi',(req,res)=>res.sendFile(path.resolve('public/tracking.html')));
+app.get('/agenda',(req,res)=>res.sendFile(path.resolve('public/agenda.html')));
 app.get('/admin',(req,res)=>res.sendFile(path.resolve('public/index.html')));
 app.get('/recrutements',(req,res)=>res.sendFile(path.resolve('public/recrutements.html')));
 app.get('/recrutement/:id',(req,res)=>res.sendFile(path.resolve('public/recrutement.html')));
 
+app.post('/api/auth/code/verify',(req,res)=>{try{const raw=clean(req.body.code,20).replace(/\s/g,'');if(!/^\d{6}$/.test(raw))return res.status(400).json({error:'Code invalide.'});const hash=crypto.createHash('sha256').update(raw).digest('hex');const row=consumeLoginCode(hash);if(!row)return res.status(401).json({error:'Code expiré, invalide ou déjà utilisé.'});req.session.player={id:row.user_id,guildId:row.guild_id,login:'temporary-code'};audit(row.guild_id,row.user_id,'employee.login','temporary-code');res.json({ok:true,user:{id:row.user_id},redirect:'/agenda'})}catch(e){console.error(e);res.status(500).json({error:'Impossible de valider le code.'})}});
+app.get('/api/employee/me',playerAuth,(req,res)=>res.json({user:req.session.player}));
+app.get('/api/employee/absences',playerAuth,(req,res)=>{const g=req.session.player.guildId;res.json(getAbsencesForUser(g,req.session.player.id))});
+app.post('/api/employee/absences',playerAuth,(req,res)=>{try{const g=req.session.player.guildId,start=clean(req.body.start_date,10),end=clean(req.body.end_date,10),type=clean(req.body.type,30),reason=clean(req.body.reason,500);if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end)||start>end)return res.status(400).json({error:'Dates invalides.'});if(!['conges','maladie','etudes','personnel','indisponible','autre'].includes(type))return res.status(400).json({error:'Type d’absence invalide.'});const username=req.session.player.username||req.session.player.global_name||('Employé '+req.session.player.id);const a=createAbsence({guildId:g,userId:req.session.player.id,username,startDate:start,endDate:end,type,reason});audit(g,req.session.player.id,'absence.created',String(a.id));res.status(201).json(a)}catch(e){console.error(e);res.status(500).json({error:'Impossible de déclarer cette absence.'})}});
+app.delete('/api/employee/absences/:id',playerAuth,(req,res)=>{const g=req.session.player.guildId;if(!deleteAbsence(Number(req.params.id),g,req.session.player.id))return res.status(404).json({error:'Absence introuvable.'});audit(g,req.session.player.id,'absence.deleted',String(req.params.id));res.json({ok:true})});
+app.get('/api/guilds/:guildId/agenda',auth,(req,res)=>{const g=req.params.guildId;if(!allowed(req,g))return res.sendStatus(403);const start=/^\d{4}-\d{2}-\d{2}$/.test(req.query.start||'')?req.query.start:null,end=/^\d{4}-\d{2}-\d{2}$/.test(req.query.end||'')?req.query.end:null;res.json(getAbsences(g,start,end))});
 app.get('/api/public/config',(req,res)=>res.json({guildId:publicGuildId(),brand:'LS CUSTOM',server:'Redside RP',player:!!req.session.player}));
 app.get('/api/public/content',publicRate,(req,res)=>{const g=publicGuildId();res.json({news:getSetting(g,'news',''),description:getSetting(g,'server_description','')})});
 app.get('/api/public/status',publicRate,async(req,res)=>{const url=process.env.FIVEM_SERVER_URL;if(!url)return res.json({configured:false,online:null,players:null,maxPlayers:null});try{const r=await fetch(`${url.replace(/\/$/,'')}/players.json`,{signal:AbortSignal.timeout(4000)});if(!r.ok)throw Error();const players=await r.json();res.json({configured:true,online:true,players:Array.isArray(players)?players.length:0,maxPlayers:Number(process.env.FIVEM_MAX_PLAYERS||0)||null})}catch{res.json({configured:true,online:false,players:0,maxPlayers:Number(process.env.FIVEM_MAX_PLAYERS||0)||null})}});
