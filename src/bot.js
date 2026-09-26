@@ -15,7 +15,7 @@ export async function getMemberAccess(guildId,userId){
   if(!member)return null;
   const names=[...member.roles.cache.values()].map(r=>normRoleName(r.name));
   const adminNames=(process.env.LS_CUSTOM_ADMIN_ROLE_NAMES||'gerant legal,developpeur site').split(',').map(normRoleName).filter(Boolean);
-  const isAdmin=names.some(n=>adminNames.includes(n))||member.permissions.has(PermissionFlagsBits.Administrator);
+  const isAdmin=names.some(n=>adminNames.includes(n));
   const roleIds=[...member.roles.cache.keys()];
   const permissions=db.getPermissionsForDiscordRoles?db.getPermissionsForDiscordRoles(guildId,roleIds):{roles:[],permissions:[]};
   const employee=db.getEmployees(guildId).find(e=>e.user_id===userId)||null;
