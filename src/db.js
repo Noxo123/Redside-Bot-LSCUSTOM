@@ -101,8 +101,6 @@ for(const sql of [
  'ALTER TABLE login_codes ADD COLUMN username TEXT NOT NULL DEFAULT \'\''
 ]){try{db.exec(sql)}catch(e){if(!String(e.message).toLowerCase().includes('duplicate column'))throw e}}
 
-]){try{db.exec(sql)}catch(e){if(!String(e.message).toLowerCase().includes('duplicate column'))throw e}}
-
 for(const ticket of db.prepare("SELECT id,guild_id,subject,details_json,created_at FROM tickets WHERE type='partnership'").all()){if(db.prepare('SELECT id FROM partnerships WHERE guild_id=? AND ticket_id=?').get(ticket.guild_id,ticket.id))continue;let d={};try{d=JSON.parse(ticket.details_json||'{}')}catch{}const now=new Date().toISOString();db.prepare('INSERT INTO partnerships(guild_id,company,contact,discord,website,status,start_date,offer,notes,ticket_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(ticket.guild_id,d.company||ticket.subject,d.contact||'',d.discord||'',d.website||'','active',ticket.created_at?.slice(0,10)||now.slice(0,10),d.proposal||'', 'Importé automatiquement depuis le ticket LSC-T-'+String(ticket.id).padStart(5,'0'),ticket.id,now,now)}
 export function upsertGuild(g){db.prepare(`INSERT INTO guilds(id,name,updated_at) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,updated_at=excluded.updated_at`).run(g.id,g.name,new Date().toISOString())}
 export function getRecruitments(guildId,status=null){return status?db.prepare('SELECT * FROM recruitments WHERE guild_id=? AND status=? ORDER BY id DESC').all(guildId,status):db.prepare('SELECT * FROM recruitments WHERE guild_id=? ORDER BY id DESC').all(guildId)}
