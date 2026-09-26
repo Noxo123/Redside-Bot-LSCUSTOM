@@ -41,8 +41,8 @@ app.get('/api/me',auth,(req,res)=>res.json({user:req.session.user,guilds:req.ses
 app.get('/api/public/me',(req,res)=>res.json({user:req.session.player||null}));
 
 app.get('/',(req,res)=>res.sendFile(path.resolve('public/portal.html')));
-app.get('/suivi',(req,res)=>res.sendFile(path.resolve('public/tracking.html')));
-app.get('/agenda',(req,res)=>res.sendFile(path.resolve('public/agenda.html')));
+app.get('/suivi',(req,res)=>res.sendFile(path.resolve('public/public-suivi.html')));
+app.get('/agenda',(req,res)=>res.redirect('/connexion'));
 app.get('/connexion',(req,res)=>res.sendFile(path.resolve('public/agenda.html')));
 app.get('/dashboard',(req,res)=>res.sendFile(path.resolve('public/organisation.html')));
 app.get('/equipe',(req,res)=>res.sendFile(path.resolve('public/recrutements.html')));
@@ -50,8 +50,8 @@ app.get('/activite',(req,res)=>res.sendFile(path.resolve('public/recrutement.htm
 app.get('/partenariats',(req,res)=>res.sendFile(path.resolve('public/tracking.html')));
 app.get('/admin',(req,res)=>res.redirect('/dashboard'));
 app.get('/organisation',(req,res)=>res.sendFile(path.resolve('public/organisation.html')));
-app.get('/recrutements',(req,res)=>res.sendFile(path.resolve('public/recrutements.html')));
-app.get('/recrutement/:id',(req,res)=>res.sendFile(path.resolve('public/recrutement.html')));
+app.get('/recrutements',(req,res)=>res.sendFile(path.resolve('public/public-recrutements.html')));
+app.get('/recrutement/:id',(req,res)=>res.sendFile(path.resolve('public/public-recrutement.html')));
 
 app.post('/api/auth/code/verify',async(req,res)=>{try{const raw=clean(req.body.code,20).replace(/\s/g,'');if(!/^\d{6}$/.test(raw))return res.status(400).json({error:'Code invalide.'});const hash=crypto.createHash('sha256').update(raw).digest('hex');const row=consumeLoginCode(hash);if(!row)return res.status(401).json({error:'Code expiré, invalide ou déjà utilisé.'});const access=await getMemberAccess(row.guild_id,row.user_id);if(!access)return res.status(403).json({error:'Ton compte Discord n’est plus accessible sur le serveur LS CUSTOM.'});req.session.player={id:row.user_id,username:row.username||access.username,global_name:access.displayName,guildId:row.guild_id,login:'temporary-code'};audit(row.guild_id,row.user_id,'employee.login','temporary-code');res.json({ok:true,user:{id:row.user_id},redirect:'/dashboard'})}catch(e){console.error(e);res.status(500).json({error:'Impossible de valider le code.'})}});
 app.get('/api/session/access',playerAuth,async(req,res)=>{try{const a=await getMemberAccess(req.session.player.guildId,req.session.player.id);if(!a)return res.status(403).json({error:'Membre Discord introuvable.'});const admin=a.isAdmin||a.roles.some(r=>['gerant_legal','developpeur_site'].includes(String(r.key).toLowerCase()));res.json({user:req.session.player,access:{...a,guildId:req.session.player.guildId,isAdmin:admin}})}catch(e){console.error(e);res.status(500).json({error:'Impossible de charger les permissions.'})}});
