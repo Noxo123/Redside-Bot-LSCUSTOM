@@ -29,7 +29,19 @@ CREATE TABLE IF NOT EXISTS hierarchy_roles (
  description TEXT,
  UNIQUE(guild_id,role_key)
 );
-CREATE INDEX IF NOT EXISTS idx_hierarchy_guild_level ON hierarchy_roles(guild_id,level DESC);
+export function getHierarchy(guildId){return db.prepare("SELECT h.*,COALESCE(rp.permissions_json,'[]') AS permissions_json FROM hierarchy_roles h LEFT JOIN role_permissions rp ON rp.guild_id=h.guild_id AND rp.role_key=h.role_key WHERE h.guild_id=? ORDER BY h.level DESC,h.id ASC").all(guildId)}
+export function getRolePermissions(guildId,roleKey){const r=db.prepare('SELECT permissions_json FROM role_permissions WHERE guild_id=? AND role_key=?').get(guildId,roleKey);try{return JSON.parse(r?.permissions_json||'[]')}catch{return[]}}
+export function setRolePermissions(guildId,roleKey,permissions=[]){db.prepare("INSERT INTO role_permissions(guild_id,role_key,permissions_json) VALUES(?,?,?) ON CONFLICT(guild_id,role_key) DO UPDATE SET permissions_json=excluded.permissions_json").run(guildId,roleKey,JSON.stringify([...new Set(permissions)]));return getRolePermissions(guildId,roleKey)}
+export function getPermissionsForDiscordRoles(guildId,discordRoleIds=[]){const rows=db.prepare("SELECT h.role_key,h.name,h.level,h.discord_role_id,COALESCE(rp.permissions_json,'[]') AS permissions_json FROM hierarchy_roles h LEFT JOIN role_permissions rp ON rp.guild_id=h.guild_id AND rp.role_key=h.role_key WHERE h.guild_id=? AND h.discord_role_id IS NOT NULL").all(guildId);const ids=new Set((discordRoleIds||[]).map(String));const matched=rows.filter(r=>ids.has(String(r.discord_role_id))).sort((a,b)=>b.level-a.level);const permissions=new Set();for(const r of matched){try{for(const p of JSON.parse(r.permissions_json||'[]'))permissions.add(p)}catch{}}return{roles:matched.map(r=>({key:r.role_key,name:r.name,level:r.level,discordRoleId:r.discord_role_id})),permissions:[...permissions]}}
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ guild_id TEXT NOT NULL,
+ role_key TEXT NOT NULL,
+ permissions_json TEXT NOT NULL DEFAULT '[]',
+ UNIQUE(guild_id,role_key)
+);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_guild ON role_permissions(guild_id);
 
 CREATE TABLE IF NOT EXISTS employees (
  id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,7 +110,8 @@ for(const sql of [
  'ALTER TABLE applications ADD COLUMN reviewed_at TEXT',
  'ALTER TABLE applications ADD COLUMN attachments_json TEXT NOT NULL DEFAULT \'[]\'',
  'ALTER TABLE tickets ADD COLUMN attachments_json TEXT NOT NULL DEFAULT \'[]\'',
- 'ALTER TABLE login_codes ADD COLUMN username TEXT NOT NULL DEFAULT \'\''
+ 'ALTER TABLE login_codes ADD COLUMN username TEXT NOT NULL DEFAULT \'\'',
+ 'ALTER TABLE hierarchy_roles ADD COLUMN permissions_json TEXT NOT NULL DEFAULT \'[]\''
 ]){try{db.exec(sql)}catch(e){if(!String(e.message).toLowerCase().includes('duplicate column'))throw e}}
 
 for(const ticket of db.prepare("SELECT id,guild_id,subject,details_json,created_at FROM tickets WHERE type='partnership'").all()){if(db.prepare('SELECT id FROM partnerships WHERE guild_id=? AND ticket_id=?').get(ticket.guild_id,ticket.id))continue;let d={};try{d=JSON.parse(ticket.details_json||'{}')}catch{}const now=new Date().toISOString();db.prepare('INSERT INTO partnerships(guild_id,company,contact,discord,website,status,start_date,offer,notes,ticket_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(ticket.guild_id,d.company||ticket.subject,d.contact||'',d.discord||'',d.website||'','active',ticket.created_at?.slice(0,10)||now.slice(0,10),d.proposal||'', 'Importé automatiquement depuis le ticket LSC-T-'+String(ticket.id).padStart(5,'0'),ticket.id,now,now)}
