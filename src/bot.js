@@ -18,6 +18,9 @@ export async function getMemberAccess(guildId,userId){
   const isAdmin=names.some(n=>adminNames.includes(n));
   const roleIds=[...member.roles.cache.keys()];
   const permissions=getPermissionsForDiscordRoles?getPermissionsForDiscordRoles(guildId,roleIds):{roles:[],permissions:[]};
+  const directPermissions=new Set(permissions.permissions);
+  for(const n of names){if(/chef|rh|drh|direction|gerant|developpeur/.test(n)){directPermissions.add('team');directPermissions.add('activity_all')}if(/direction|gerant|developpeur|drh|partenariat/.test(n))directPermissions.add('partnerships')}
+  permissions.permissions=[...directPermissions];
   const employee=db.getEmployees(guildId).find(e=>e.user_id===userId)||null;
   return {memberId:member.id,username:member.user.username,displayName:member.displayName||member.user.globalName||member.user.username,roleIds,roles:permissions.roles,permissions:permissions.permissions,isAdmin,employee};
 }function websiteUrl(p=''){const b=(process.env.BASE_URL||'http://localhost:3000').replace(/\/$/,'');return `${b}${p}`}
