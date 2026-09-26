@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS partnerships (
  offer TEXT,
  notes TEXT,
  ticket_id INTEGER,
+ discord_channel_id TEXT,
  created_at TEXT NOT NULL,
  updated_at TEXT NOT NULL
 );
@@ -111,7 +112,8 @@ for(const sql of [
  'ALTER TABLE applications ADD COLUMN attachments_json TEXT NOT NULL DEFAULT \'[]\'',
  'ALTER TABLE tickets ADD COLUMN attachments_json TEXT NOT NULL DEFAULT \'[]\'',
  'ALTER TABLE login_codes ADD COLUMN username TEXT NOT NULL DEFAULT \'\'',
- 'ALTER TABLE hierarchy_roles ADD COLUMN permissions_json TEXT NOT NULL DEFAULT \'[]\''
+ 'ALTER TABLE hierarchy_roles ADD COLUMN permissions_json TEXT NOT NULL DEFAULT \'[]\'',
+ 'ALTER TABLE partnerships ADD COLUMN discord_channel_id TEXT'
 ]){try{db.exec(sql)}catch(e){if(!String(e.message).toLowerCase().includes('duplicate column'))throw e}}
 
 for(const ticket of db.prepare("SELECT id,guild_id,subject,details_json,created_at FROM tickets WHERE type='partnership'").all()){if(db.prepare('SELECT id FROM partnerships WHERE guild_id=? AND ticket_id=?').get(ticket.guild_id,ticket.id))continue;let d={};try{d=JSON.parse(ticket.details_json||'{}')}catch{}const now=new Date().toISOString();db.prepare('INSERT INTO partnerships(guild_id,company,contact,discord,website,status,start_date,offer,notes,ticket_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(ticket.guild_id,d.company||ticket.subject,d.contact||'',d.discord||'',d.website||'','active',ticket.created_at?.slice(0,10)||now.slice(0,10),d.proposal||'', 'Importé automatiquement depuis le ticket LSC-T-'+String(ticket.id).padStart(5,'0'),ticket.id,now,now)}
@@ -164,7 +166,8 @@ export function getQuotaEntry(id,guildId){return db.prepare('SELECT q.*,e.userna
 
 export function getPartnerships(guildId,status=null){return status?db.prepare('SELECT * FROM partnerships WHERE guild_id=? AND status=? ORDER BY COALESCE(start_date,created_at) DESC,id DESC').all(guildId,status):db.prepare('SELECT * FROM partnerships WHERE guild_id=? ORDER BY COALESCE(start_date,created_at) DESC,id DESC').all(guildId)}
 export function getPartnership(id,guildId){return db.prepare('SELECT * FROM partnerships WHERE id=? AND guild_id=?').get(id,guildId)}
-export function upsertPartnership(d){const now=new Date().toISOString();if(d.id){db.prepare('UPDATE partnerships SET company=?,contact=?,discord=?,website=?,status=?,start_date=?,end_date=?,offer=?,notes=?,ticket_id=?,updated_at=? WHERE id=? AND guild_id=?').run(d.company,d.contact||'',d.discord||'',d.website||'',d.status||'active',d.startDate||null,d.endDate||null,d.offer||'',d.notes||'',d.ticketId||null,now,d.id,d.guildId);return getPartnership(d.id,d.guildId)}const r=db.prepare('INSERT INTO partnerships(guild_id,company,contact,discord,website,status,start_date,end_date,offer,notes,ticket_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)').run(d.guildId,d.company,d.contact||'',d.discord||'',d.website||'',d.status||'active',d.startDate||null,d.endDate||null,d.offer||'',d.notes||'',d.ticketId||null,now,now);return getPartnership(r.lastInsertRowid,d.guildId)}
+export function upsertPartnership(d){const now=new Date().toISOString();if(d.id){db.prepare('UPDATE partnerships SET company=?,contact=?,discord=?,website=?,status=?,start_date=?,end_date=?,offer=?,notes=?,ticket_id=?,discord_channel_id=?,updated_at=? WHERE id=? AND guild_id=?').run(d.company,d.contact||'',d.discord||'',d.website||'',d.status||'active',d.startDate||null,d.endDate||null,d.offer||'',d.notes||'',d.ticketId||null,d.discordChannelId||null,now,d.id,d.guildId);return getPartnership(d.id,d.guildId)}const r=db.prepare('INSERT INTO partnerships(guild_id,company,contact,discord,website,status,start_date,end_date,offer,notes,ticket_id,discord_channel_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(d.guildId,d.company,d.contact||'',d.discord||'',d.website||'',d.status||'active',d.startDate||null,d.endDate||null,d.offer||'',d.notes||'',d.ticketId||null,d.discordChannelId||null,now,now);return getPartnership(r.lastInsertRowid,d.guildId)}
+export function getPartnershipByDiscordChannel(guildId,channelId){return db.prepare('SELECT * FROM partnerships WHERE guild_id=? AND discord_channel_id=?').get(guildId,channelId)}
 export function deletePartnership(id,guildId){const r=db.prepare('DELETE FROM partnerships WHERE id=? AND guild_id=?').run(id,guildId);return r.changes>0}
 
 export function organisationStats(guildId){const employees=getEmployees(guildId);const active=employees.filter(x=>x.status==='active');const partnerships=getPartnerships(guildId);const now=new Date().toISOString().slice(0,10);const current=partnerships.filter(x=>x.status==='active'&&(!x.end_date||x.end_date>=now));return{employees:active.length,allEmployees:employees.length,roles:getHierarchy(guildId).length,partnerships:current.length,allPartnerships:partnerships.length,absences:getAbsences(guildId).filter(x=>x.end_date>=now).length,quotaTracked:active.filter(x=>x.quota_enabled).length}}
