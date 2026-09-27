@@ -22,8 +22,8 @@ function render(d){
  renderMessages(d);
  document.querySelector('#logout').onclick=async()=>{await api('/auth/partnership/logout',{method:'POST'});location.reload()};
  const decide=async decision=>{const btn=document.querySelector(decision==='accept'?'#acceptProposal':'#declineProposal'),err=document.querySelector('#decisionError');if(!btn)return;btn.disabled=true;if(err)err.hidden=true;try{await api('/api/client/partnership/decision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({decision})});await refresh()}catch(e){if(err){err.textContent=e.message;err.hidden=false}btn.disabled=false}};
- document.querySelector('#acceptProposal'?.addEventListener('click',()=>decide('accept'));
- document.querySelector('#declineProposal'?.addEventListener('click',()=>decide('decline'));
+ document.querySelector('#acceptProposal')?.addEventListener('click',()=>decide('accept'));
+ document.querySelector('#declineProposal')?.addEventListener('click',()=>decide('decline'));
  document.querySelector('#composer').onsubmit=async e=>{e.preventDefault();const input=document.querySelector('#message'),btn=e.currentTarget.querySelector('button'),err=document.querySelector('#sendError');const content=input.value.trim();if(!content)return;btn.disabled=true;err.hidden=true;try{const x=await api('/api/client/partnership/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content})});state.messages=x.messages;input.value='';renderMessages(state);document.querySelector('#count').textContent=state.messages.length+' message(s)'}catch(e){err.textContent=e.message;err.hidden=false}finally{btn.disabled=false}};
 }
 async function refresh(){try{const d=await api('/api/client/partnership');if(!state)render(d);else{state=d;renderMessages(d);const count=document.querySelector('#count');if(count)count.textContent=(d.messages?.length||0)+' message(s)'}}catch(e){if(!state&&e.message==='Lien partenaire requis.')login();else if(!state)app.innerHTML='<div class="error"><b>Accès impossible</b><div style="margin-top:7px">'+esc(e.message)+'</div></div>'}}
