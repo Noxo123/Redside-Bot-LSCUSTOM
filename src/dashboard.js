@@ -62,7 +62,8 @@ function safePaymentProofPath(filePath){
 app.use(express.json({limit:'1mb'}));
 app.use(express.urlencoded({extended:true}));
 app.use(express.static('public'));
-app.use('/uploads/payment-proofs',(req,res)=>res.sendStatus(404));\napp.use('/uploads',express.static(uploadDir));
+app.use('/uploads/payment-proofs',(req,res)=>res.sendStatus(404));
+app.use('/uploads',express.static(uploadDir));
 app.use(session({secret:process.env.SESSION_SECRET||'dev-secret',resave:false,saveUninitialized:false,cookie:{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:7*86400000}}));
 
 const clean=(v,max)=>String(v??'').trim().slice(0,max);
