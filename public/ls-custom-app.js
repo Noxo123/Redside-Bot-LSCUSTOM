@@ -24,3 +24,25 @@ function shell(access,user){
  const logout=()=>api('/auth/player/logout',{method:'POST'}).finally(()=>location.href='/connexion');top.querySelector('#profileLogout').onclick=logout;
 }
 async function init(){try{const r=await api('/api/session/access');window.__LS_ACCESS=r.access;shell(r.access,r.user||{});document.documentElement.classList.add('ls-ready')}catch(e){if(path!=='/connexion')location.href='/connexion'}}init()})();
+/* Global LS CUSTOM UX enhancements */
+window.LSUI=window.LSUI||{};
+window.LSUI.toast=(message,type='success',title=type==='error'?'Erreur':'LS CUSTOM')=>{
+ let stack=document.querySelector('.ls-toast-stack');
+ if(!stack){stack=document.createElement('div');stack.className='ls-toast-stack';document.body.appendChild(stack)}
+ const el=document.createElement('div');el.className='ls-toast '+type;
+ el.innerHTML='<div><b>'+esc(title)+'</b><span>'+esc(message)+'</span></div><button class="ls-toast-close" type="button">×</button>';
+ el.querySelector('button').onclick=()=>el.remove();stack.appendChild(el);
+ setTimeout(()=>{if(el.isConnected)el.remove()},4200);
+};
+function enhance(){
+ if(!document.querySelector('.ls-page-progress')){const p=document.createElement('div');p.className='ls-page-progress';document.body.appendChild(p);requestAnimationFrame(()=>p.style.width='100%');setTimeout(()=>{p.style.opacity='0'},450)}
+ document.querySelectorAll('button:not([data-ls-enhanced]),a:not([data-ls-enhanced])').forEach(el=>{
+   el.dataset.lsEnhanced='1';
+   if(el.tagName==='BUTTON'&&el.type==='submit')el.addEventListener('click',()=>{if(!el.disabled&&!el.dataset.keepText){el.dataset.originalText=el.innerHTML;setTimeout(()=>{if(el.disabled)el.innerHTML='Chargement…'},30)}});
+ });
+ document.querySelectorAll('input,textarea,select').forEach(el=>{
+   if(el.dataset.lsField)return;el.dataset.lsField='1';
+   el.addEventListener('input',()=>el.classList.toggle('has-value',!!el.value));
+ });
+}
+document.addEventListener('DOMContentLoaded',()=>{setTimeout(enhance,50);new MutationObserver(()=>enhance()).observe(document.body,{childList:true,subtree:true})});
