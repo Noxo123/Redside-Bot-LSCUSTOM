@@ -163,3 +163,8 @@ body>[class*="min-h-screen"][class*="lg:grid"]{grid-template-columns:270px minma
 @media(max-width:1150px){.dash-grid-kpi{grid-template-columns:repeat(2,1fr)}.action-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:850px){.dash-grid-main{grid-template-columns:1fr}.dash-header{align-items:flex-start;flex-direction:column}.dash-header-meta{justify-content:flex-start}.metric-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.dash-grid-kpi{grid-template-columns:1fr}.action-grid{grid-template-columns:1fr}.dash-header h1{font-size:34px!important}.dash-card{padding:16px}.dash-stat{min-height:105px}.partner-summary{grid-template-columns:1fr 1fr}.partner-big{grid-column:1/-1}.absence-row{align-items:flex-start;flex-direction:column;gap:4px}}
+
+/* Final dashboard sizing overrides */
+body>[class*="min-h-screen"][class*="lg:grid"]{grid-template-columns:270px minmax(0,1fr)!important}
+body>[class*="min-h-screen"][class*="lg:grid"]>main>div{max-width:1500px!important}
+@media(max-width:900px){body>[class*="min-h-screen"][class*="lg:grid"]{grid-template-columns:1fr!important}body>[class*="min-h-screen"][class*="lg:grid"]>aside{height:auto;position:sticky}body>[class*="min-h-screen"][class*="lg:grid"]>aside>div{height:auto!important}}
