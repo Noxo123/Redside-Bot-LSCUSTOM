@@ -182,7 +182,7 @@ function ensurePartnershipTermsColumns(){
     ['proposal_status',"TEXT NOT NULL DEFAULT 'pending'"],
     ['staff_accepted_at','TEXT'],
     ['client_accepted_at','TEXT'],
-    ['client_declined_at','TEXT']
+    ['client_declined_at','TEXT'],['payment_status',"TEXT NOT NULL DEFAULT 'unpaid'"],['payment_proof_path','TEXT'],['payment_proof_uploaded_at','TEXT']
   ];
   for(const [name,type] of add)if(!cols.includes(name))db.exec('ALTER TABLE partnerships ADD COLUMN '+name+' '+type);
 }
