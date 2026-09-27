@@ -55,8 +55,7 @@ export async function sendPartnershipPortalMessage({guildId,channelId,content,us
   const payload={content:String(content).slice(0,2000),username:String(username).slice(0,80),allowedMentions:{parse:[]}};
   if(avatarURL)payload.avatarURL=avatarURL;
   if(hook)return hook.send(payload);
-  return channel.send({content:'**'+String(username).replaceAll('**','')+'**
-'+String(content).slice(0,1900),allowedMentions:{parse:[]}});
+  return channel.send({content:'**'+String(username).replaceAll('**','')+'**\\n'+String(content).slice(0,1900),allowedMentions:{parse:[]}});
 }
 async function syncPartnershipTicket(channel){
   const categoryId=getSetting(channel.guild.id,'partnership_category')||process.env.PARTNERSHIP_TICKET_CATEGORY_ID||'1549137158919430255';
