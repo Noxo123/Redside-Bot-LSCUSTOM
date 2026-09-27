@@ -47,7 +47,7 @@ app.get('/connexion',(req,res)=>res.sendFile(path.resolve('public/agenda.html'))
 app.get('/dashboard',(req,res)=>res.sendFile(path.resolve('public/organisation.html')));
 app.get('/equipe',(req,res)=>res.sendFile(path.resolve('public/recrutements.html')));
 app.get('/activite',(req,res)=>res.sendFile(path.resolve('public/recrutement.html')));
-app.get('/partenariats',(req,res)=>{const raw=clean(req.query.access,200);if(raw){const hash=crypto.createHash('sha256').update(raw).digest('hex');const p=getPartnershipByAccessHash(hash);if(p){req.session.clientPartnership={id:p.id,guildId:p.guild_id};req.session.save(()=>res.sendFile(path.resolve('public/partenariat-client.html')));return}return res.status(403).sendFile(path.resolve('public/partenariat-client.html'))}res.sendFile(path.resolve('public/tracking.html'))});
+app.get('/partenariats',(req,res)=>{const raw=clean(req.query.access,200);if(raw){const hash=crypto.createHash('sha256').update(raw).digest('hex');const p=getPartnershipByAccessHash(hash);if(p){req.session.clientPartnership={id:p.id,guildId:p.guild_id};req.session.save(()=>res.sendFile(path.resolve('public/partenariat-client.html')));return}return res.status(403).sendFile(path.resolve('public/partenariat-client.html'))}if(req.session.clientPartnership)return res.sendFile(path.resolve('public/partenariat-client.html'));res.sendFile(path.resolve('public/tracking.html'))});
 app.get('/podium',(req,res)=>res.sendFile(path.resolve('public/podium.html')));
 app.get('/admin',(req,res)=>res.redirect('/dashboard'));
 app.get('/organisation',(req,res)=>res.sendFile(path.resolve('public/organisation.html')));
