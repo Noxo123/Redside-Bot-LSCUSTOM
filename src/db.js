@@ -182,7 +182,7 @@ function ensurePartnershipTermsColumns(){
     ['proposal_status',"TEXT NOT NULL DEFAULT 'pending'"],
     ['staff_accepted_at','TEXT'],
     ['client_accepted_at','TEXT'],
-    ['client_declined_at','TEXT'],['payment_status',"TEXT NOT NULL DEFAULT 'unpaid'"],['payment_proof_path','TEXT'],['payment_proof_uploaded_at','TEXT']
+    ['client_declined_at','TEXT'],['payment_status',"TEXT NOT NULL DEFAULT 'unpaid'"],['payment_proof_path','TEXT'],['payment_proof_uploaded_at','TEXT'],['payment_proof_uploaded_by','TEXT'],['payment_proof_uploader_name','TEXT'],['payment_proof_mime','TEXT'],['payment_proof_original_name','TEXT'],['payment_proof_sha256','TEXT']
   ];
   for(const [name,type] of add)if(!cols.includes(name))db.exec('ALTER TABLE partnerships ADD COLUMN '+name+' '+type);
 }
@@ -191,6 +191,17 @@ ensurePartnershipTermsColumns();
 export function getPartnerships(guildId,status=null){return status?db.prepare('SELECT * FROM partnerships WHERE guild_id=? AND status=? ORDER BY COALESCE(start_date,created_at) DESC,id DESC').all(guildId,status):db.prepare('SELECT * FROM partnerships WHERE guild_id=? ORDER BY COALESCE(start_date,created_at) DESC,id DESC').all(guildId)}
 export function getPartnership(id,guildId){return db.prepare('SELECT * FROM partnerships WHERE id=? AND guild_id=?').get(id,guildId)}
 export function upsertPartnership(d){ensurePartnershipTermsColumns();const now=new Date().toISOString();if(d.id){const existing=getPartnership(d.id,d.guildId);if(!existing)return null;db.prepare('UPDATE partnerships SET company=?,contact=?,discord=?,website=?,status=?,start_date=?,end_date=?,offer=?,notes=?,ticket_id=?,discord_channel_id=?,price=?,proposal_status=?,staff_accepted_at=?,client_accepted_at=?,client_declined_at=?,updated_at=? WHERE id=? AND guild_id=?').run(d.company??existing.company,d.contact??existing.contact??'',d.discord??existing.discord??'',d.website??existing.website??'',d.status??existing.status??'pending',d.startDate??existing.start_date??null,d.endDate??existing.end_date??null,d.offer??existing.offer??'',d.notes??existing.notes??'',d.ticketId??existing.ticket_id??null,d.discordChannelId??existing.discord_channel_id??null,d.price===undefined?existing.price:(d.price==null?null:Number(d.price)),d.proposalStatus??existing.proposal_status??'pending',d.staffAcceptedAt??existing.staff_accepted_at??null,d.clientAcceptedAt??existing.client_accepted_at??null,d.clientDeclinedAt??existing.client_declined_at??null,now,d.id,d.guildId);return getPartnership(d.id,d.guildId)}const r=db.prepare('INSERT INTO partnerships(guild_id,company,contact,discord,website,status,start_date,end_date,offer,notes,ticket_id,discord_channel_id,price,proposal_status,staff_accepted_at,client_accepted_at,client_declined_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(d.guildId,d.company,d.contact||'',d.discord||'',d.website||'',d.status||'pending',d.startDate||null,d.endDate||null,d.offer||'',d.notes||'',d.ticketId||null,d.discordChannelId||null,d.price==null?null:Number(d.price),d.proposalStatus||'pending',d.staffAcceptedAt||null,d.clientAcceptedAt||null,d.clientDeclinedAt||null,now,now);return getPartnership(r.lastInsertRowid,d.guildId)}
+export function setPartnershipPaymentProof(id,guildId,d){
+  ensurePartnershipTermsColumns();
+  const now=d.uploadedAt||new Date().toISOString();
+  db.prepare('UPDATE partnerships SET payment_status=?,payment_proof_path=?,payment_proof_uploaded_at=?,payment_proof_uploaded_by=?,payment_proof_uploader_name=?,payment_proof_mime=?,payment_proof_original_name=?,payment_proof_sha256=?,updated_at=? WHERE id=? AND guild_id=?').run('paid',d.path,d.uploadedAt||now,d.uploadedBy||null,d.uploaderName||'Utilisateur',d.mime||null,d.originalName||null,d.sha256||null,now,id,guildId);
+  return getPartnership(id,guildId);
+}
+export function clearPartnershipPaymentProof(id,guildId){
+  ensurePartnershipTermsColumns();
+  db.prepare('UPDATE partnerships SET payment_status=\'unpaid\',payment_proof_path=NULL,payment_proof_uploaded_at=NULL,payment_proof_uploaded_by=NULL,payment_proof_uploader_name=NULL,payment_proof_mime=NULL,payment_proof_original_name=NULL,payment_proof_sha256=NULL,updated_at=? WHERE id=? AND guild_id=?').run(new Date().toISOString(),id,guildId);
+  return getPartnership(id,guildId);
+}
 export function getPartnershipByDiscordChannel(guildId,channelId){return db.prepare('SELECT * FROM partnerships WHERE guild_id=? AND discord_channel_id=?').get(guildId,channelId)}
 export function findMatchingPartnership(guildId,{company='',discord=''}={}){
   const rows=getPartnerships(guildId);
@@ -224,10 +235,18 @@ export function mergePartnershipRecords(sourceId,targetId,guildId){
     proposalStatus:pick(target.proposal_status,source.proposal_status),
     staffAcceptedAt:pick(target.staff_accepted_at,source.staff_accepted_at),
     clientAcceptedAt:pick(target.client_accepted_at,source.client_accepted_at),
-    clientDeclinedAt:pick(target.client_declined_at,source.client_declined_at)
+    clientDeclinedAt:pick(target.client_declined_at,source.client_declined_at),
+    paymentStatus:pick(target.payment_status,source.payment_status),
+    paymentProofPath:pick(target.payment_proof_path,source.payment_proof_path),
+    paymentProofUploadedAt:pick(target.payment_proof_uploaded_at,source.payment_proof_uploaded_at),
+    paymentProofUploadedBy:pick(target.payment_proof_uploaded_by,source.payment_proof_uploaded_by),
+    paymentProofUploaderName:pick(target.payment_proof_uploader_name,source.payment_proof_uploader_name),
+    paymentProofMime:pick(target.payment_proof_mime,source.payment_proof_mime),
+    paymentProofOriginalName:pick(target.payment_proof_original_name,source.payment_proof_original_name),
+    paymentProofSha256:pick(target.payment_proof_sha256,source.payment_proof_sha256)
   };
   const tx=db.transaction(()=>{
-    db.prepare('UPDATE partnerships SET company=?,contact=?,discord=?,website=?,status=?,start_date=?,end_date=?,offer=?,notes=?,ticket_id=?,discord_channel_id=?,price=?,proposal_status=?,staff_accepted_at=?,client_accepted_at=?,client_declined_at=?,updated_at=? WHERE id=? AND guild_id=?').run(merged.company,merged.contact,merged.discord,merged.website,merged.status,merged.startDate,merged.endDate,merged.offer,merged.notes,merged.ticketId,merged.discordChannelId,merged.price,merged.proposalStatus,merged.staffAcceptedAt,merged.clientAcceptedAt,merged.clientDeclinedAt,new Date().toISOString(),target.id,guildId);
+    db.prepare('UPDATE partnerships SET company=?,contact=?,discord=?,website=?,status=?,start_date=?,end_date=?,offer=?,notes=?,ticket_id=?,discord_channel_id=?,price=?,proposal_status=?,staff_accepted_at=?,client_accepted_at=?,client_declined_at=?,payment_status=?,payment_proof_path=?,payment_proof_uploaded_at=?,payment_proof_uploaded_by=?,payment_proof_uploader_name=?,payment_proof_mime=?,payment_proof_original_name=?,payment_proof_sha256=?,updated_at=? WHERE id=? AND guild_id=?').run(merged.company,merged.contact,merged.discord,merged.website,merged.status,merged.startDate,merged.endDate,merged.offer,merged.notes,merged.ticketId,merged.discordChannelId,merged.price,merged.proposalStatus,merged.staffAcceptedAt,merged.clientAcceptedAt,merged.clientDeclinedAt,merged.paymentStatus,merged.paymentProofPath,merged.paymentProofUploadedAt,merged.paymentProofUploadedBy,merged.paymentProofUploaderName,merged.paymentProofMime,merged.paymentProofOriginalName,merged.paymentProofSha256,new Date().toISOString(),target.id,guildId);
     if(access){
       if(existingAccess)db.prepare('DELETE FROM partnership_access WHERE id=?').run(existingAccess.id);
       db.prepare('UPDATE partnership_access SET partnership_id=? WHERE id=?').run(target.id,access.id);
