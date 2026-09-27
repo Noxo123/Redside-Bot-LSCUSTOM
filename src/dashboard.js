@@ -42,7 +42,7 @@ app.get('/api/public/me',(req,res)=>res.json({user:req.session.player||null}));
 
 app.get('/',(req,res)=>res.sendFile(path.resolve('public/portal.html')));
 app.get('/suivi',(req,res)=>res.sendFile(path.resolve('public/public-suivi.html')));
-app.get('/agenda',(req,res)=>res.redirect('/connexion'));
+app.get('/agenda',(req,res)=>res.sendFile(path.resolve('public/agenda-board.html')));
 app.get('/connexion',(req,res)=>res.sendFile(path.resolve('public/agenda.html')));
 app.get('/dashboard',(req,res)=>res.sendFile(path.resolve('public/organisation.html')));
 app.get('/equipe',(req,res)=>res.sendFile(path.resolve('public/recrutements.html')));
