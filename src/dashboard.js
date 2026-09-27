@@ -24,7 +24,7 @@ app.use(session({secret:process.env.SESSION_SECRET||'dev-secret',resave:false,sa
 const clean=(v,max)=>String(v??'').trim().slice(0,max);
 const publicGuildId=()=>process.env.DEFAULT_GUILD_ID||null;
 const parseJson=(v,fallback)=>{try{return JSON.parse(v||JSON.stringify(fallback))}catch{return fallback}};
-const auth=(req,res,next)=>req.session.user?next():res.status(401).json({error:'unauthorized'});
+const auth=(req,res,next)=>req.session.user||req.session.player?next():res.status(401).json({error:'unauthorized'});
 const playerAuth=(req,res,next)=>req.session.player?next():res.status(401).json({error:'Connexion Discord requise'});
 const allowed=(req,id)=>(req.session.guilds||[]).some(g=>g.id===id);
 const publicHits=new Map();
