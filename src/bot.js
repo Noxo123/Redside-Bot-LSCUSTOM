@@ -39,7 +39,7 @@ async function ensureTicketCategory(guild){
 }
 async function createDiscordTicket({guild,user,type='support',partnershipId=null}){
   await waitForReady(); const category=await ensureTicketCategory(guild);
-  const existing=guild.channels.cache.find(c=>c.parentId===category.id&&c.topic===('ticket-user:'+user.id)); if(existing)return existing;
+  const existing=guild.channels.cache.find(c=>c.parentId===category.id&&String(c.topic||'').startsWith('ticket-user:'+user.id+'|')); if(existing)return existing;
   const safe=String(user.username||user.globalName||'membre').toLowerCase().replace(/[^a-z0-9-]/g,'-').slice(0,24)||'membre';
   const channel=await guild.channels.create({name:'ticket-'+safe,type:0,parent:category.id,topic:'ticket-user:'+user.id+'|type:'+type,permissionOverwrites:[
     {id:guild.roles.everyone.id,deny:[PermissionFlagsBits.ViewChannel]},
