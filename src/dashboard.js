@@ -4,21 +4,65 @@ import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import db,{getRecruitments,getRecruitment,createRecruitment,createApplication,hasRecentApplication,getApplicationsForUser,getSetting,setSetting,audit,getAuditLogs,createTicket,getTicket,getTicketsForUser,consumeLoginCode,createAbsence,getAbsences,getAbsencesForUser,deleteAbsence,getHierarchy,upsertHierarchyRole,deleteHierarchyRole,getEmployees,upsertEmployee,deleteEmployee,getQuotaEntries,upsertQuota,getPartnerships,getPartnership,findMatchingPartnership,mergePartnershipRecords,upsertPartnership,getPartnershipByDiscordChannel,deletePartnership,createPartnershipAccess,getPartnershipByAccessHash,organisationStats,setRolePermissions,syncEmployeeIdentity,updateRecruitment,countRecentApplicationsByIdentity,countSecurityAttempts,recordSecurityAttempt} from './db.js';
+import db,{getRecruitments,getRecruitment,createRecruitment,createApplication,hasRecentApplication,getApplicationsForUser,getSetting,setSetting,audit,getAuditLogs,createTicket,getTicket,getTicketsForUser,consumeLoginCode,createAbsence,getAbsences,getAbsencesForUser,deleteAbsence,getHierarchy,upsertHierarchyRole,deleteHierarchyRole,getEmployees,upsertEmployee,deleteEmployee,getQuotaEntries,upsertQuota,getPartnerships,getPartnership,findMatchingPartnership,mergePartnershipRecords,upsertPartnership,getPartnershipByDiscordChannel,deletePartnership,createPartnershipAccess,getPartnershipByAccessHash,setPartnershipPaymentProof,clearPartnershipPaymentProof,organisationStats,setRolePermissions,syncEmployeeIdentity,updateRecruitment,countRecentApplicationsByIdentity,countSecurityAttempts,recordSecurityAttempt} from './db.js';
 import {notifyWebsiteApplication,notifyWebsiteTicket,getMemberAccess,client,sendPartnershipPortalMessage,ensurePartnershipDiscordTicket,publishFromDashboard} from './bot.js';
 
 const app=express();
 const uploadDir=path.resolve('data/uploads');
+const paymentProofDir=path.join(uploadDir,'payment-proofs');
 fs.mkdirSync(uploadDir,{recursive:true});
+fs.mkdirSync(paymentProofDir,{recursive:true});
 const upload=multer({
- storage:multer.diskStorage({destination:uploadDir,filename:(req,file,cb)=>cb(null,`${Date.now()}-${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`)}),
+ storage:multer.diskStorage({destination:uploadDir,filename:(req,file,cb)=>cb(null,Date.now()+'-'+crypto.randomUUID()+path.extname(file.originalname).toLowerCase())}),
  limits:{fileSize:8*1024*1024},
  fileFilter:(req,file,cb)=>cb(null,/^(image\/(png|jpe?g|webp|gif)|application\/pdf)$/.test(file.mimetype))
 });
+const paymentProofUpload=multer({
+ storage:multer.diskStorage({
+   destination:paymentProofDir,
+   filename:(req,file,cb)=>cb(null,crypto.randomUUID()+path.extname(file.originalname).toLowerCase())
+ }),
+ limits:{fileSize:8*1024*1024,files:1,fields:12},
+ fileFilter:(req,file,cb)=>cb(null,/^(image\/(png|jpe?g|webp|gif)|application\/pdf)$/.test(file.mimetype))
+});
+const paymentUploadHits=new Map();
+function paymentUploadToken(req){
+  if(!req.session.paymentUploadToken)req.session.paymentUploadToken=crypto.randomBytes(32).toString('hex');
+  return req.session.paymentUploadToken;
+}
+function validPaymentUploadToken(req){
+  const supplied=String(req.get('x-payment-upload-token')||'');
+  const expected=String(paymentUploadToken(req));
+  const a=Buffer.from(supplied),b=Buffer.from(expected);
+  return a.length===b.length&&crypto.timingSafeEqual(a,b);
+}
+function paymentUploadRate(req,res,next){
+  const key=crypto.createHash('sha256').update(String(req.ip||'unknown')+'|'+String(req.sessionID||'')).digest('hex');
+  const now=Date.now(),row=paymentUploadHits.get(key)||{at:now,count:0};
+  if(now-row.at>10*60*1000){row.at=now;row.count=0}
+  row.count++;
+  paymentUploadHits.set(key,row);
+  if(row.count>5)return res.status(429).json({error:'Trop de tentatives d’envoi de preuve. Réessaie dans 10 minutes.'});
+  next();
+}
+function paymentProofMime(filePath){
+  const b=fs.readFileSync(filePath,{encoding:null,flag:'r'}).subarray(0,16);
+  if(b.length>=8&&b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])))return 'image/png';
+  if(b.length>=3&&b.subarray(0,3).equals(Buffer.from([255,216,255])))return 'image/jpeg';
+  if(b.length>=6&&(b.subarray(0,6).toString()==='GIF87a'||b.subarray(0,6).toString()==='GIF89a'))return 'image/gif';
+  if(b.length>=12&&b.subarray(0,4).toString()==='RIFF'&&b.subarray(8,12).toString()==='WEBP')return 'image/webp';
+  if(b.length>=5&&b.subarray(0,5).toString()==='%PDF-')return 'application/pdf';
+  return null;
+}
+function safePaymentProofPath(filePath){
+  const root=path.resolve(paymentProofDir)+path.sep;
+  const absolute=path.resolve(filePath);
+  return absolute.startsWith(root)?absolute:null;
+}
 app.use(express.json({limit:'1mb'}));
 app.use(express.urlencoded({extended:true}));
 app.use(express.static('public'));
-app.use('/uploads',express.static(uploadDir));
+app.use('/uploads/payment-proofs',(req,res)=>res.sendStatus(404));\napp.use('/uploads',express.static(uploadDir));
 app.use(session({secret:process.env.SESSION_SECRET||'dev-secret',resave:false,saveUninitialized:false,cookie:{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:7*86400000}}));
 
 const clean=(v,max)=>String(v??'').trim().slice(0,max);
@@ -74,7 +118,7 @@ const clientPartnershipAuth=(req,res,next)=>req.session.clientPartnership?next()
 app.get('/auth/partnership/login',(req,res)=>{const access=clean(req.query.access,200);if(access){const hash=crypto.createHash('sha256').update(access).digest('hex');const p=getPartnershipByAccessHash(hash);if(!p)return res.status(403).send('Lien partenaire invalide.');req.session.clientPartnership={id:p.id,guildId:p.guild_id}}const redirect=`${SITE_BASE_URL}/auth/partnership/callback`;const state=crypto.randomBytes(24).toString('hex');req.session.partnershipOAuthState=state;const p=new URLSearchParams({client_id:process.env.DISCORD_CLIENT_ID,response_type:'code',redirect_uri:redirect,scope:'identify',state});res.redirect(`https://discord.com/oauth2/authorize?${p}`)});
 app.get('/auth/partnership/callback',async(req,res)=>{try{if(!req.query.state||req.query.state!==req.session.partnershipOAuthState)return res.status(400).send('Session OAuth invalide.');delete req.session.partnershipOAuthState;const redirect=`${SITE_BASE_URL}/auth/partnership/callback`;const body=new URLSearchParams({client_id:process.env.DISCORD_CLIENT_ID,client_secret:process.env.DISCORD_CLIENT_SECRET,grant_type:'authorization_code',code:req.query.code,redirect_uri:redirect});const tr=await fetch('https://discord.com/api/oauth2/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});const token=await tr.json();if(!tr.ok||!token.access_token)throw Error(token.error_description||'OAuth token absent');const user=await fetch('https://discord.com/api/users/@me',{headers:{Authorization:`Bearer ${token.access_token}`}}).then(r=>r.json());if(!req.session.clientPartnership)return res.status(403).send('Aucun partenariat associé à cette connexion.');req.session.clientPartnership.userId=user.id;req.session.clientPartnership.user={id:user.id,username:user.username,global_name:user.global_name||user.username,avatar:user.avatar};req.session.save(()=>res.redirect('/partenariats'))}catch(e){res.status(500).send(`Connexion Discord échouée : ${e.message}`)}});
 app.post('/auth/partnership/logout',(req,res)=>{delete req.session.clientPartnership;res.json({ok:true})});
-app.get('/api/client/partnership',clientPartnershipAuth,async(req,res)=>{try{let p=getPartnership(req.session.clientPartnership.id,req.session.clientPartnership.guildId);if(!p)return res.status(404).json({error:'Partenariat introuvable.'});let ticket=null;if(p.ticket_id)ticket=getTicket(p.ticket_id,p.guild_id);const messages=await partnershipMessages(p);res.json({partnership:{id:p.id,guild_id:p.guild_id,company:p.company,contact:p.contact,status:p.status,website:p.website,offer:p.offer,start_date:p.start_date,end_date:p.end_date,price:p.price,proposal_status:p.proposal_status,staff_accepted_at:p.staff_accepted_at,client_accepted_at:p.client_accepted_at,client_declined_at:p.client_declined_at,notes:p.notes},ticket:ticket?{id:ticket.id,subject:ticket.subject,status:ticket.status,created_at:ticket.created_at,discord_channel_id:ticket.discord_channel_id}:null,messages,user:req.session.clientPartnership.user||null})}catch(e){console.error(e);res.status(500).json({error:'Impossible de charger votre espace partenaire.'})}});
+app.get('/api/client/partnership',clientPartnershipAuth,async(req,res)=>{try{let p=getPartnership(req.session.clientPartnership.id,req.session.clientPartnership.guildId);if(!p)return res.status(404).json({error:'Partenariat introuvable.'});let ticket=null;if(p.ticket_id)ticket=getTicket(p.ticket_id,p.guild_id);const messages=await partnershipMessages(p);res.json({partnership:{id:p.id,guild_id:p.guild_id,company:p.company,contact:p.contact,status:p.status,website:p.website,offer:p.offer,start_date:p.start_date,end_date:p.end_date,price:p.price,proposal_status:p.proposal_status,staff_accepted_at:p.staff_accepted_at,client_accepted_at:p.client_accepted_at,client_declined_at:p.client_declined_at,notes:p.notes,payment_status:p.payment_status||'unpaid',payment_proof_path:p.payment_proof_path?true:null,payment_proof_uploaded_at:p.payment_proof_uploaded_at,payment_proof_uploader_name:p.payment_proof_uploader_name,payment_proof_mime:p.payment_proof_mime,payment_proof_original_name:p.payment_proof_original_name},ticket:ticket?{id:ticket.id,subject:ticket.subject,status:ticket.status,created_at:ticket.created_at,discord_channel_id:ticket.discord_channel_id}:null,messages,user:req.session.clientPartnership.user||null,uploadToken:paymentUploadToken(req)})}catch(e){console.error(e);res.status(500).json({error:'Impossible de charger votre espace partenaire.'})}});
 app.post('/api/client/partnership/decision',clientPartnershipAuth,async(req,res)=>{try{const p=getPartnership(req.session.clientPartnership.id,req.session.clientPartnership.guildId);if(!p)return res.status(404).json({error:'Partenariat introuvable.'});if(p.proposal_status!=='proposed')return res.status(409).json({error:'Aucune proposition en attente.'});const decision=req.body.decision==='accept'?'accept':'decline';const now=new Date().toISOString();const updated=upsertPartnership({id:p.id,guildId:p.guild_id,company:p.company,contact:p.contact,discord:p.discord,website:p.website,status:'pending',startDate:p.start_date,endDate:p.end_date,offer:p.offer,notes:p.notes,ticketId:p.ticket_id,discordChannelId:p.discord_channel_id,price:p.price,proposalStatus:decision==='accept'?'client_accepted':'declined',staffAcceptedAt:p.staff_accepted_at,clientAcceptedAt:decision==='accept'?now:null,clientDeclinedAt:decision==='decline'?now:null});audit(p.guild_id,req.session.clientPartnership.user?.id||null,'partnership.client_'+decision,String(p.id));res.json({ok:true,partnership:updated})}catch(e){console.error(e);res.status(500).json({error:'Impossible d’enregistrer votre décision.'})}});
 
 app.post('/api/employee/partnerships/:id/finalize',playerAuth,async(req,res)=>{try{const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);if(!a||!(a.isAdmin||a.permissions.includes('partnerships')||a.permissions.includes('all')))return res.status(403).json({error:'Accès partenariats refusé.'});const p=getPartnership(Number(req.params.id),g);if(!p)return res.status(404).json({error:'Partenariat introuvable.'});if(p.proposal_status!=='client_accepted')return res.status(409).json({error:'Le partenaire doit accepter la proposition avant votre validation finale.'});const now=new Date().toISOString();const updated=upsertPartnership({id:p.id,guildId:g,company:p.company,contact:p.contact,discord:p.discord,website:p.website,status:'active',startDate:p.start_date,endDate:p.end_date,offer:p.offer,notes:p.notes,ticketId:p.ticket_id,discordChannelId:p.discord_channel_id,price:p.price,proposalStatus:'accepted',staffAcceptedAt:now,clientAcceptedAt:p.client_accepted_at,clientDeclinedAt:null});audit(g,req.session.player.id,'partnership.finalized',String(p.id));res.json(updated)}catch(e){console.error(e);res.status(500).json({error:'Impossible de valider définitivement le partenariat.'})}});
@@ -120,11 +164,83 @@ app.get('/api/employee/overview',playerAuth,(req,res)=>{try{res.json(organisatio
 app.get('/api/employee/activity',playerAuth,async(req,res)=>{try{const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);if(!a)return res.status(403).json({error:'Accès refusé.'});const admin=a.isAdmin||a.roles.some(r=>['gerant_legal','developpeur_site'].includes(String(r.key).toLowerCase()));const all=admin||a.permissions.includes('activity_all')||a.permissions.includes('all');const start=clean(req.query.start,10),end=clean(req.query.end,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end))return res.status(400).json({error:'Période invalide.'});const employees=getEmployees(g).filter(e=>e.status!=='inactive');const entries=getQuotaEntries(g,start,end);const byUser=new Map(entries.map(q=>[String(q.user_id),q]));const rows=(all?employees:employees.filter(e=>String(e.user_id)===String(req.session.player.id))).map(e=>byUser.get(String(e.user_id))||{employee_id:e.id,user_id:e.user_id,username:e.username,display_name:e.display_name,role_name:e.role_name,role_key:e.role_key,role_level:e.role_level,quota_target:e.quota_target,quota_enabled:e.quota_enabled,period_start:start,period_end:end,appels:0,reparations:0,fourrieres:0,personnalisations:0,factures:0,montant_fourrieres:0,montant_personnalisations:0,montant_factures:0,note:''});res.json({scope:all?'all':'self',canImport:all,rows})}catch(e){console.error(e);res.status(500).json({error:'Impossible de charger l’activité.'})}});
 app.post('/api/employee/quotas/import',playerAuth,async(req,res)=>{try{const g=req.session.player.guildId;const a=await getMemberAccess(g,req.session.player.id);if(!a)return res.status(403).json({error:'Accès refusé.'});const allowedRole=a.isAdmin||a.permissions.includes('activity_all')||a.permissions.includes('all');if(!allowedRole)return res.status(403).json({error:'Seuls les RH, DRH, patrons et rôles autorisés peuvent importer les quotas.'});const start=clean(req.body.period_start,10),end=clean(req.body.period_end,10),raw=String(req.body.text||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end)||start>end)return res.status(400).json({error:'Période invalide.'});if(raw.length<20)return res.status(400).json({error:'Colle le relevé complet des interventions.'});const value=(line,label)=>{const m=line.match(new RegExp(label+'\\s*:\\s*\\$?\\s*([\\d\\u00a0\\u202f\\s]+)','i'));return m?Number(m[1].replace(/[^0-9]/g,''))||0:0};const rows=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),imported=[],created=[],employees=getEmployees(g);for(const line of rows){const head=line.match(/^\d+\.\s*(.*?)\s+—\s*Appels\s*:/i);if(!head)continue;const name=head[1].replace(/\s+/g,' ').trim();const appels=value(line,'Appels'),reparations=value(line,'Réparations'),fourrieres=value(line,'Mises en fourrière'),personnalisations=value(line,'Personnalisations'),factures=value(line,'Factures encaissées'),montantFourrieres=value(line,'Montant fourrière'),montantPersonnalisations=value(line,'Montant personnalisations'),montantFactures=value(line,'Montant factures');let employee=employees.find(e=>String(e.display_name||'').trim().toLocaleLowerCase('fr-FR')===name.toLocaleLowerCase('fr-FR')||String(e.username||'').trim().toLocaleLowerCase('fr-FR')===name.toLocaleLowerCase('fr-FR'));if(!employee){const slug=name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');employee=upsertEmployee({guildId:g,userId:'import:'+slug,username:name,displayName:name,status:'active',quotaEnabled:true,quotaTarget:0,notes:'Employé créé automatiquement lors d’un import de quotas.'});employees.push(employee);created.push(name)}upsertQuota({guildId:g,employeeId:employee.id,periodStart:start,periodEnd:end,appels,reparations,fourrieres,personnalisations,factures,montantFourrieres,montantPersonnalisations,montantFactures,note:'Import des interventions'});imported.push({name,employeeId:employee.id})}audit(g,req.session.player.id,'quota.bulk_import',JSON.stringify({periodStart:start,periodEnd:end,count:imported.length,created:created.length}));res.json({ok:true,count:imported.length,created,imported})}catch(e){console.error(e);res.status(500).json({error:'Impossible d’importer les quotas.'})}});
 app.get('/api/employee/team',playerAuth,async(req,res)=>{try{const a=await getMemberAccess(req.session.player.guildId,req.session.player.id);if(!a)return res.status(403).json({error:'Accès refusé.'});const admin=a.isAdmin||a.permissions.includes('team')||a.permissions.includes('all');if(!admin)return res.status(403).json({error:'Accès équipe refusé.'});res.json(getEmployees(req.session.player.guildId))}catch(e){res.status(500).json({error:'Impossible de charger l’équipe.'})}});
+
+app.post('/api/employee/partnerships/:id/payment-request',playerAuth,async(req,res)=>{try{
+ const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);
+ if(!a||!(a.isAdmin||a.permissions.includes('partnerships')||a.permissions.includes('all')))return res.status(403).json({error:'Accès partenariats refusé.'});
+ const p=getPartnership(Number(req.params.id),g);if(!p)return res.status(404).json({error:'Partenariat introuvable.'});
+ if(p.proposal_status!=='accepted')return res.status(409).json({error:'Le partenariat doit être définitivement accepté avant une demande de paiement.'});
+ if(p.payment_proof_path){const old=safePaymentProofPath(path.resolve(p.payment_proof_path));if(old&&fs.existsSync(old))fs.rmSync(old,{force:true})}
+ const updated=clearPartnershipPaymentProof(p.id,g);
+ audit(g,req.session.player.id,'partnership.payment_requested',String(p.id));
+ res.json(updated);
+}catch(e){console.error(e);res.status(500).json({error:'Impossible de créer la nouvelle demande de paiement.'})}});
+
+app.get('/api/employee/partnerships/:id/payment-proof',playerAuth,async(req,res)=>{try{
+ const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);
+ if(!a||!(a.isAdmin||a.permissions.includes('partnerships')||a.permissions.includes('all')))return res.sendStatus(403);
+ const p=getPartnership(Number(req.params.id),g);if(!p?.payment_proof_path)return res.sendStatus(404);
+ const file=safePaymentProofPath(path.resolve(p.payment_proof_path));if(!file||!fs.existsSync(file))return res.sendStatus(404);
+ res.set({'Content-Type':p.payment_proof_mime||'application/octet-stream','Content-Disposition':'inline; filename="preuve-paiement"','X-Content-Type-Options':'nosniff','Cache-Control':'private, no-store'});
+ fs.createReadStream(file).pipe(res);
+}catch(e){console.error(e);res.sendStatus(500)}});
+
+app.post('/api/employee/partnerships/:id/payment-proof',playerAuth,paymentUploadRate,(req,res,next)=>{
+ if(!validPaymentUploadToken(req))return res.status(403).json({error:'Jeton de sécurité de téléversement invalide.'});
+ next();
+},paymentProofUpload.single('proof'),async(req,res)=>{let newPath=null;try{
+ const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);
+ if(!a||!(a.isAdmin||a.permissions.includes('partnerships')||a.permissions.includes('all')))return res.sendStatus(403);
+ const p=getPartnership(Number(req.params.id),g);if(!p)return res.status(404).json({error:'Partenariat introuvable.'});
+ if(p.proposal_status!=='accepted')return res.status(409).json({error:'Le partenariat doit être définitivement accepté avant d’envoyer une preuve.'});
+ if(!req.file)return res.status(400).json({error:'Aucune preuve envoyée.'});
+ newPath=req.file.path;
+ const detected=paymentProofMime(newPath);
+ if(!detected||detected!==req.file.mimetype){fs.rmSync(newPath,{force:true});return res.status(400).json({error:'Fichier refusé : type réel invalide.'});
+ }
+ const sha256=crypto.createHash('sha256').update(fs.readFileSync(newPath)).digest('hex');
+ const oldPath=p.payment_proof_path?safePaymentProofPath(path.resolve(p.payment_proof_path)):null;
+ const uploaderName=a.displayName||a.username||req.session.player.global_name||req.session.player.username||'LS CUSTOM';
+ const updated=setPartnershipPaymentProof(p.id,g,{path:newPath,uploadedBy:req.session.player.id,uploaderName,mime:detected,originalName:path.basename(req.file.originalname).slice(0,180),sha256});
+ if(oldPath&&oldPath!==newPath&&fs.existsSync(oldPath))fs.rmSync(oldPath,{force:true});
+ audit(g,req.session.player.id,'partnership.payment_proof_uploaded',JSON.stringify({partnershipId:p.id,sha256}));
+ res.status(201).json(updated);
+}catch(e){if(newPath&&fs.existsSync(newPath))fs.rmSync(newPath,{force:true});console.error(e);res.status(500).json({error:'Impossible d’enregistrer la preuve de paiement.'})}});
+
+app.get('/api/client/partnership/payment-proof',clientPartnershipAuth,async(req,res)=>{try{
+ const p=getPartnership(req.session.clientPartnership.id,req.session.clientPartnership.guildId);if(!p?.payment_proof_path)return res.sendStatus(404);
+ const file=safePaymentProofPath(path.resolve(p.payment_proof_path));if(!file||!fs.existsSync(file))return res.sendStatus(404);
+ res.set({'Content-Type':p.payment_proof_mime||'application/octet-stream','Content-Disposition':'inline; filename="preuve-paiement"','X-Content-Type-Options':'nosniff','Cache-Control':'private, no-store'});
+ fs.createReadStream(file).pipe(res);
+}catch(e){console.error(e);res.sendStatus(500)}});
+
+app.post('/api/client/partnership/payment-proof',clientPartnershipAuth,paymentUploadRate,(req,res,next)=>{
+ if(!req.session.clientPartnership.userId)return res.status(403).json({error:'Connectez-vous avec Discord avant d’envoyer une preuve.'});
+ if(!validPaymentUploadToken(req))return res.status(403).json({error:'Jeton de sécurité de téléversement invalide.'});
+ next();
+},paymentProofUpload.single('proof'),async(req,res)=>{let newPath=null;try{
+ const p=getPartnership(req.session.clientPartnership.id,req.session.clientPartnership.guildId);if(!p)return res.status(404).json({error:'Partenariat introuvable.'});
+ if(p.proposal_status!=='accepted')return res.status(409).json({error:'Le partenariat doit être définitivement accepté avant d’envoyer une preuve.'});
+ if(!req.file)return res.status(400).json({error:'Aucune preuve envoyée.'});
+ newPath=req.file.path;
+ const detected=paymentProofMime(newPath);
+ if(!detected||detected!==req.file.mimetype){fs.rmSync(newPath,{force:true});return res.status(400).json({error:'Fichier refusé : type réel invalide.'});
+ }
+ const sha256=crypto.createHash('sha256').update(fs.readFileSync(newPath)).digest('hex');
+ const oldPath=p.payment_proof_path?safePaymentProofPath(path.resolve(p.payment_proof_path)):null;
+ const u=req.session.clientPartnership.user;
+ const uploaderName=u?.global_name||u?.username||p.contact||'Partenaire';
+ const updated=setPartnershipPaymentProof(p.id,p.guild_id,{path:newPath,uploadedBy:u?.id||null,uploaderName,mime:detected,originalName:path.basename(req.file.originalname).slice(0,180),sha256});
+ if(oldPath&&oldPath!==newPath&&fs.existsSync(oldPath))fs.rmSync(oldPath,{force:true});
+ audit(p.guild_id,u?.id||null,'partnership.payment_proof_uploaded',JSON.stringify({partnershipId:p.id,sha256}));
+ res.status(201).json(updated);
+}catch(e){if(newPath&&fs.existsSync(newPath))fs.rmSync(newPath,{force:true});console.error(e);res.status(500).json({error:'Impossible d’enregistrer la preuve de paiement.'})}});
+
 app.get('/api/employee/partnerships/:id/conversation',playerAuth,async(req,res)=>{try{const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);if(!a)return res.status(403).json({error:'Accès refusé.'});if(!(a.isAdmin||a.permissions.includes('partnerships')||a.permissions.includes('all')))return res.status(403).json({error:'Accès partenariats refusé.'});const p=getPartnership(Number(req.params.id),g);if(!p)return res.status(404).json({error:'Partenariat introuvable.'});res.json({partnership:{id:p.id,company:p.company,contact:p.contact,status:p.status,discord_channel_id:p.discord_channel_id},messages:await partnershipMessages(p)})}catch(e){console.error(e);res.status(500).json({error:'Impossible de charger la conversation.'})}});
 app.post('/api/employee/partnerships/:id/messages',playerAuth,async(req,res)=>{try{const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);if(!a)return res.status(403).json({error:'Accès refusé.'});if(!(a.isAdmin||a.permissions.includes('partnerships')||a.permissions.includes('all')))return res.status(403).json({error:'Accès partenariats refusé.'});const p=getPartnership(Number(req.params.id),g);if(!p?.discord_channel_id)return res.status(409).json({error:'Aucun ticket Discord associé.'});const content=clean(req.body.content,2000);if(!content)return res.status(400).json({error:'Le message est vide.'});const name=a.displayName||a.username||'LS CUSTOM';await sendPartnershipPortalMessage({guildId:g,channelId:p.discord_channel_id,content,username:'LS CUSTOM • '+name});audit(g,req.session.player.id,'partnership.staff_message',String(p.id));res.status(201).json({ok:true,messages:await partnershipMessages(p)})}catch(e){console.error(e);res.status(500).json({error:'Impossible d’envoyer le message.'})}});
 app.post('/api/employee/partnerships/:id/proposal',playerAuth,async(req,res)=>{try{const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);if(!a)return res.status(403).json({error:'Accès refusé.'});if(!(a.isAdmin||a.permissions.includes('partnerships')||a.permissions.includes('all')))return res.status(403).json({error:'Accès partenariats refusé.'});const p=getPartnership(Number(req.params.id),g);if(!p)return res.status(404).json({error:'Partenariat introuvable.'});const start=clean(req.body.start_date,10)||new Date().toISOString().slice(0,10);let end=clean(req.body.end_date,10);if(!end){const d=new Date(start+'T12:00:00');d.setMonth(d.getMonth()+1);end=d.toISOString().slice(0,10)}if(end<=start)return res.status(400).json({error:'La date de fin doit être après la date de début.'});const price=Number(req.body.price);if(!Number.isFinite(price)||price<0)return res.status(400).json({error:'Prix invalide.'});const offer=clean(req.body.offer,2000);const updated=upsertPartnership({id:p.id,guildId:g,company:p.company,contact:p.contact,discord:p.discord,website:p.website,status:'pending',startDate:start,endDate:end,offer,notes:p.notes,ticketId:p.ticket_id,discordChannelId:p.discord_channel_id,price,proposalStatus:'proposed',staffAcceptedAt:new Date().toISOString(),clientAcceptedAt:null,clientDeclinedAt:null});audit(g,req.session.player.id,'partnership.proposal.sent',String(p.id));res.json(updated)}catch(e){console.error(e);res.status(500).json({error:'Impossible d’enregistrer la proposition.'})}});
 
-app.get('/api/employee/partnerships',playerAuth,async(req,res)=>{try{const a=await getMemberAccess(req.session.player.guildId,req.session.player.id);if(!a)return res.status(403).json({error:'Accès refusé.'});const admin=a.isAdmin||a.permissions.includes('partnerships')||a.permissions.includes('all');if(!admin)return res.status(403).json({error:'Accès partenariats refusé.'});res.json(getPartnerships(req.session.player.guildId))}catch(e){res.status(500).json({error:'Impossible de charger les partenariats.'})}});
+app.get('/api/employee/partnerships',playerAuth,async(req,res)=>{try{const a=await getMemberAccess(req.session.player.guildId,req.session.player.id);if(!a)return res.status(403).json({error:'Accès refusé.'});const admin=a.isAdmin||a.permissions.includes('partnerships')||a.permissions.includes('all');if(!admin)return res.status(403).json({error:'Accès partenariats refusé.'});res.json(getPartnerships(req.session.player.guildId))}catch(e){res.status(500).json({error:'Impossible de charger les partenariats.'})}});\napp.get('/api/partnership/payment-upload-token',playerAuth,(req,res)=>res.json({token:paymentUploadToken(req)}));
 app.post('/api/employee/partnerships/import-ticket',playerAuth,async(req,res)=>{try{const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);if(!a)return res.status(403).json({error:'Accès refusé.'});const allowedRole=a.isAdmin||a.permissions.includes('partnerships')||a.permissions.includes('all');if(!allowedRole)return res.status(403).json({error:'Accès partenariats refusé.'});const channelId=clean(req.body.channel_id,30),categoryId=getSetting(g,'partnership_category')||process.env.PARTNERSHIP_TICKET_CATEGORY_ID||'1549137158919430255';const guild=client.guilds.cache.get(g)||await client.guilds.fetch(g).catch(()=>null);const channel=guild?await guild.channels.fetch(channelId).catch(()=>null):null;if(!channel||channel.parentId!==categoryId)return res.status(400).json({error:'Ce salon n’est pas dans la catégorie Partenariat Ticket Tool.'});const existing=getPartnershipByDiscordChannel(g,channelId);if(existing)return res.json(existing);let creatorId=null;for(const [id,ow] of channel.permissionOverwrites.cache){if(ow.type===1&&id!==guild.id){creatorId=id;break}}const creator=creatorId?await guild.members.fetch(creatorId).catch(()=>null):null;let company=channel.name.replace(/[-_]+/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase()).slice(0,150);let contact=creator?.displayName||creator?.user?.username||'Demandeur Ticket Tool';try{const msgs=await channel.messages.fetch({limit:20});const first=[...msgs.values()].sort((a,b)=>a.createdTimestamp-b.createdTimestamp).find(m=>!m.author.bot&&m.content);if(first){const lines=first.content.split('\\n').map(s=>s.trim()).filter(Boolean);const companyLine=lines.find(s=>/entreprise|société|nom/i.test(s));if(companyLine)company=companyLine.replace(/^(entreprise|société|nom)\\s*[:：-]?\\s*/i,'').slice(0,150)}}catch{}const matching=findMatchingPartnership(g,{company,discord:creatorId||''});const p=upsertPartnership({id:matching?.id,guildId:g,company:matching?.company||company,contact:matching?.contact||contact,discord:matching?.discord||creatorId||'',website:matching?.website||'',status:matching?.status||'pending',startDate:matching?.start_date||new Date().toISOString().slice(0,10),endDate:matching?.end_date||null,offer:matching?.offer||'',notes:matching?.notes||`Créé depuis Ticket Tool : ${channel.url}`,ticketId:matching?.ticket_id||null,discordChannelId:channelId,price:matching?.price,proposalStatus:matching?.proposal_status||'pending',staffAcceptedAt:matching?.staff_accepted_at||null,clientAcceptedAt:matching?.client_accepted_at||null,clientDeclinedAt:matching?.client_declined_at||null});audit(g,req.session.player.id,'partnership.imported_from_ticket',channelId);res.status(201).json(p)}catch(e){console.error(e);res.status(500).json({error:'Impossible de convertir ce ticket Ticket Tool.'})}});
 
 
