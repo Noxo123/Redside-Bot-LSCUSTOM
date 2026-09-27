@@ -13,9 +13,10 @@ function render(data){
  const totals=['appels','reparations','fourrieres','personnalisations','factures','montant_fourrieres','montant_personnalisations','montant_factures'].reduce((o,k)=>{o[k]=(rows||[]).reduce((n,r)=>n+(Number(r[k])||0),0);return o},{});
  const actions=totals.appels+totals.reparations+totals.fourrieres+totals.personnalisations+totals.factures;
  const targetPerPerson=20000000;
- const presentCount=(rows||[]).filter(r=>r.status!=='inactive').length || Number(overview?.employees||0) || 0;
- const target=targetPerPerson*presentCount;
- const customPct=target>0?Math.min(100,Math.round(totals.montant_personnalisations/target*100)):0;
+ const employees=(rows||[]).filter(r=>r.status!=='inactive');
+ const presentCount=employees.length || Number(overview?.employees||0) || 0;
+ const reachedCount=employees.filter(r=>(Number(r.montant_personnalisations)||0)>=targetPerPerson).length;
+ const customPct=presentCount>0?Math.min(100,Math.round(reachedCount/presentCount*100)):0;
  const activityTotal=r=>Number(r.appels||0)+Number(r.reparations||0)+Number(r.fourrieres||0)+Number(r.personnalisations||0)+Number(r.factures||0);
  const ranked=[...(rows||[])].sort((a,b)=>(Number(b.montant_personnalisations)||0)-(Number(a.montant_personnalisations)||0)||activityTotal(b)-activityTotal(a)).slice(0,6);
  const teamRows=(team||[]).filter(x=>x.status!=='inactive').slice(0,8);
@@ -28,7 +29,7 @@ function render(data){
  <section class="dash-grid dash-grid-kpi">
  ${stat('Employés actifs',overview?.employees??(team||[]).length,'sur '+(overview?.allEmployees??(team||[]).length)+' profils','01')}
  ${stat('Actions cette semaine',actions,'appels · réparations · fourrières','02')}
- ${stat('CA personnalisations',money(totals.montant_personnalisations),'objectif : '+money(targetPerPerson)+' × '+presentCount+' personne'+(presentCount>1?'s':''),'03')}
+ ${stat('CA personnalisations',money(totals.montant_personnalisations),'quota atteint : '+reachedCount+' / '+presentCount+' personne'+(presentCount>1?'s':''),'03')}
  ${stat('Partenariats actifs',overview?.partnerships??activePartners.length,pendingPartners.length+' en attente','04')}
  </section>
 
@@ -38,7 +39,7 @@ function render(data){
   <div class="quota-overview">
    <div class="quota-overview-top"><div><b>${money(totals.montant_personnalisations)}</b><span>réalisé sur la période</span></div><div class="quota-big">${customPct}%</div></div>
    <div class="quota-track"><i style="width:${customPct}%"></i></div>
-   <div class="quota-overview-foot"><span>Objectif collectif · ${presentCount} personne${presentCount>1?'s':''}</span><strong>${money(target)}</strong></div>
+   <div class="quota-overview-foot"><span>${reachedCount} / ${presentCount} employés ont atteint leur quota</span><strong>${money(targetPerPerson)} / personne</strong></div>
   </div>
   <div class="metric-grid">
    <div><span>Appels</span><b>${totals.appels}</b></div><div><span>Réparations</span><b>${totals.reparations}</b></div><div><span>Fourrières</span><b>${totals.fourrieres}</b></div><div><span>Personnalisations</span><b>${totals.personnalisations}</b></div><div><span>Factures</span><b>${totals.factures}</b></div><div><span>Facturation totale</span><b>${money(totals.montant_fourrieres+totals.montant_personnalisations+totals.montant_factures)}</b></div>
