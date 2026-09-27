@@ -113,22 +113,23 @@ app.get('/api/employee/absences',playerAuth,(req,res)=>{const g=req.session.play
 app.get('/api/employee/agenda',playerAuth,(req,res)=>{const g=req.session.player.guildId;const start=/^\d{4}-\d{2}-\d{2}$/.test(req.query.start||'')?req.query.start:null,end=/^\d{4}-\d{2}-\d{2}$/.test(req.query.end||'')?req.query.end:null;res.json(getAbsences(g,start,end))});
 app.post('/api/employee/absences',playerAuth,(req,res)=>{try{const g=req.session.player.guildId,start=clean(req.body.start_date,10),end=clean(req.body.end_date,10),type=clean(req.body.type,30),reason=clean(req.body.reason,500);if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end)||start>end)return res.status(400).json({error:'Dates invalides.'});if(!['conges','maladie','etudes','personnel','indisponible','autre'].includes(type))return res.status(400).json({error:'Type d’absence invalide.'});const username=req.session.player.username||req.session.player.global_name||('Employé '+req.session.player.id);const a=createAbsence({guildId:g,userId:req.session.player.id,username,startDate:start,endDate:end,type,reason});audit(g,req.session.player.id,'absence.created',String(a.id));res.status(201).json(a)}catch(e){console.error(e);res.status(500).json({error:'Impossible de déclarer cette absence.'})}});
 app.delete('/api/employee/absences/:id',playerAuth,(req,res)=>{const g=req.session.player.guildId;if(!deleteAbsence(Number(req.params.id),g,req.session.player.id))return res.status(404).json({error:'Absence introuvable.'});audit(g,req.session.player.id,'absence.deleted',String(req.params.id));res.json({ok:true})});
-const clientPartnershipAuth=(req,res,next)=>req.session.clientPartnership?next():res.status(401).json({error:'Lien partenaire requis.'});async function partnershipMessages(partnership){
-  if(!partnership?.discord_channel_id)return [];
-  const guild=client.guilds.cache.get(partnership.guild_id)||await client.guilds.fetch(partnership.guild_id).catch(()=>null);
-  const ch=guild?.channels.cache.get(partnership.discord_channel_id)||await guild?.channels.fetch(partnership.discord_channel_id).catch(()=>null);
-  if(!ch?.isTextBased?.())return [];
-  try{
-    const msgs=await ch.messages.fetch({limit:80});
-    return [...msgs.values()].filter(m=>String(m.content||'').trim()||m.attachments?.size).sort((a,b)=>a.createdTimestamp-b.createdTimestamp).slice(-60).map(m=>({id:m.id,author:m.author?.globalName||m.author?.username||'Discord',avatar:m.author?.displayAvatarURL?.({extension:'png',size:64})||null,content:String(m.content||'').slice(0,2000),createdAt:m.createdAt?.toISOString()||null,bot:!!m.author?.bot,webhook:!!m.webhookId,attachments:[...(m.attachments?.values?.()||[])].slice(0,8).map(a=>({url:a.url,name:a.name||'Pièce jointe',contentType:a.contentType||'',size:a.size||0}))}));
-  }catch{return []}
-  const proposalStatus=partnership.proposal_status||'pending';
-  if(proposalStatus!=='pending'){
-    const proposal={id:'proposal-'+partnership.id,author:'LS CUSTOM',avatar:null,content:'',createdAt:partnership.staff_accepted_at||partnership.updated_at||partnership.created_at,bot:true,webhook:true,proposal:{price:partnership.price,start_date:partnership.start_date,end_date:partnership.end_date,offer:partnership.offer||'',status:proposalStatus}};
-    const base=Array.isArray(partnership.__messages)?partnership.__messages:[];
-    return [...base,proposal];
+const clientPartnershipAuth=(req,res,next)=>req.session.clientPartnership?next():res.status(401).json({error:'Lien partenaire requis.'});
+async function partnershipMessages(partnership){
+  let messages=[];
+  if(partnership?.discord_channel_id){
+    const guild=client.guilds.cache.get(partnership.guild_id)||await client.guilds.fetch(partnership.guild_id).catch(()=>null);
+    const ch=guild?.channels.cache.get(partnership.discord_channel_id)||await guild?.channels.fetch(partnership.discord_channel_id).catch(()=>null);
+    if(ch?.isTextBased?.()){
+      try{
+        const msgs=await ch.messages.fetch({limit:80});
+        messages=[...msgs.values()].filter(m=>String(m.content||'').trim()||m.attachments?.size).sort((a,b)=>a.createdTimestamp-b.createdTimestamp).slice(-60).map(m=>({id:m.id,author:m.author?.globalName||m.author?.username||'Discord',avatar:m.author?.displayAvatarURL?.({extension:'png',size:64})||null,content:String(m.content||'').slice(0,2000),createdAt:m.createdAt?.toISOString()||null,bot:!!m.author?.bot,webhook:!!m.webhookId,attachments:[...(m.attachments?.values?.()||[])].slice(0,8).map(a=>({url:a.url,name:a.name||'Pièce jointe',contentType:a.contentType||'',size:a.size||0}))}));
+      }catch{}
+    }
   }
-  return [];
+  if(partnership?.proposal_status&&partnership.proposal_status!=='pending'){
+    messages.push({id:'proposal-'+partnership.id,author:'LS CUSTOM',avatar:null,content:'',createdAt:partnership.staff_accepted_at||partnership.updated_at||partnership.created_at,bot:true,webhook:true,proposal:{price:partnership.price,start_date:partnership.start_date,end_date:partnership.end_date,offer:partnership.offer||'',status:partnership.proposal_status}});
+  }
+  return messages.sort((a,b)=>new Date(a.createdAt||0)-new Date(b.createdAt||0));
 }
 app.get('/auth/partnership/login',(req,res)=>{const access=clean(req.query.access,200);if(access){const hash=crypto.createHash('sha256').update(access).digest('hex');const p=getPartnershipByAccessHash(hash);if(!p)return res.status(403).send('Lien partenaire invalide.');req.session.clientPartnership={id:p.id,guildId:p.guild_id}}const redirect=`${SITE_BASE_URL}/auth/partnership/callback`;const state=crypto.randomBytes(24).toString('hex');req.session.partnershipOAuthState=state;const p=new URLSearchParams({client_id:process.env.DISCORD_CLIENT_ID,response_type:'code',redirect_uri:redirect,scope:'identify',state});res.redirect(`https://discord.com/oauth2/authorize?${p}`)});
 app.get('/auth/partnership/callback',async(req,res)=>{try{if(!req.query.state||req.query.state!==req.session.partnershipOAuthState)return res.status(400).send('Session OAuth invalide.');delete req.session.partnershipOAuthState;const redirect=`${SITE_BASE_URL}/auth/partnership/callback`;const body=new URLSearchParams({client_id:process.env.DISCORD_CLIENT_ID,client_secret:process.env.DISCORD_CLIENT_SECRET,grant_type:'authorization_code',code:req.query.code,redirect_uri:redirect});const tr=await fetch('https://discord.com/api/oauth2/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});const token=await tr.json();if(!tr.ok||!token.access_token)throw Error(token.error_description||'OAuth token absent');const user=await fetch('https://discord.com/api/users/@me',{headers:{Authorization:`Bearer ${token.access_token}`}}).then(r=>r.json());if(!req.session.clientPartnership)return res.status(403).send('Aucun partenariat associé à cette connexion.');req.session.clientPartnership.userId=user.id;req.session.clientPartnership.user={id:user.id,username:user.username,global_name:user.global_name||user.username,avatar:user.avatar};req.session.save(()=>res.redirect('/partenariats'))}catch(e){res.status(500).send(`Connexion Discord échouée : ${e.message}`)}});
