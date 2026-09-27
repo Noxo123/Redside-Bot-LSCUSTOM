@@ -15,7 +15,7 @@ function render(data){
  const targetPerPerson=20000000;
  const employees=(rows||[]).filter(r=>r.status!=='inactive');
  const presentCount=employees.length || Number(overview?.employees||0) || 0;
- const reachedCount=employees.filter(r=>(Number(r.montant_personnalisations)||0)>=targetPerPerson).length;
+ const reachedCount=employees.filter(r=>(Number(r.montant_personnalisations)||0)>=targetPerPerson).length;\n const halfwayCount=employees.filter(r=>(Number(r.montant_personnalisations)||0)>=targetPerPerson*.5).length;\n const quotaAverage=presentCount?Math.round(employees.reduce((n,r)=>n+(Number(r.montant_personnalisations)||0),0)/presentCount):0;\n const pendingPayments=(partnerships||[]).filter(p=>p.status==='active'&&p.payment_status!=='paid').length;
  const customPct=presentCount>0?Math.min(100,Math.round(reachedCount/presentCount*100)):0;
  const activityTotal=r=>Number(r.appels||0)+Number(r.reparations||0)+Number(r.fourrieres||0)+Number(r.personnalisations||0)+Number(r.factures||0);
  const ranked=[...(rows||[])].sort((a,b)=>(Number(b.montant_personnalisations)||0)-(Number(a.montant_personnalisations)||0)||activityTotal(b)-activityTotal(a)).slice(0,6);
@@ -57,14 +57,14 @@ function render(data){
  <div class="team-mini">${teamRows.length?teamRows.map(e=>`<div class="team-row"><span class="avatar-mini">${esc((e.display_name||e.username||'?').slice(0,1).toUpperCase())}</span><div><b>${esc(e.display_name||e.username)}</b><small>${esc(roleLabel(e))}</small></div><span class="team-status ${esc(e.status||'active')}">${statusLabel(e.status)}</span></div>`).join(''):empty('Aucun profil','Les employés apparaîtront ici.')}</div></article>
 
  <article class="dash-card"><div class="dash-card-head"><div><span class="dash-label">PARTENARIATS</span><h2>Relations entreprise</h2></div><a href="/partenariats" class="dash-link">Gérer →</a></div>
- <div class="partner-summary"><div class="partner-big"><b>${activePartners.length}</b><span>partenariats actifs</span></div><div class="partner-line"><span>En attente</span><strong>${pendingPartners.length}</strong></div><div class="partner-line"><span>Total enregistré</span><strong>${(partnerships||[]).length}</strong></div></div>
+ <div class="partner-summary"><div class="partner-big"><b>${activePartners.length}</b><span>partenariats actifs</span></div><div class="partner-line"><span>En attente de validation</span><strong>${pendingPartners.length}</strong></div><div class="partner-line"><span>Paiements à vérifier</span><strong>${pendingPayments}</strong></div><div class="partner-line"><span>Total enregistré</span><strong>${(partnerships||[]).length}</strong></div></div>
  <div class="partner-list">${activePartners.slice(0,4).map(p=>`<div><b>${esc(p.company)}</b><span>${esc(p.contact||'Contact non défini')}</span></div>`).join('')}</div></article>
 
  <article class="dash-card"><div class="dash-card-head"><div><span class="dash-label">AGENDA RH</span><h2>Absences à venir</h2></div><a href="/agenda" class="dash-link">Ouvrir →</a></div>
  <div class="absence-list">${upcoming.length?upcoming.map(a=>`<div class="absence-row"><div><b>${esc(a.username||'Employé')}</b><small>${esc(a.type||'Indisponibilité')}</small></div><span>${esc(a.start_date)} → ${esc(a.end_date)}</span></div>`).join(''):empty('Aucune absence','Aucune absence enregistrée sur la période.')}</div></article>
  </section>
 
- <section class="dash-card dash-actions"><div class="dash-card-head"><div><span class="dash-label">ACCÈS RAPIDES</span><h2>Actions opérationnelles</h2></div></div>
+ <section class="dash-card dash-insights"><div class="dash-card-head"><div><span class="dash-label">INDICATEURS</span><h2>Lecture rapide</h2></div></div><div class="metric-grid"><div><span>CA moyen / employé</span><b>${money(quotaAverage)}</b></div><div><span>À 50% du quota</span><b>${halfwayCount} / ${presentCount}</b></div><div><span>Quota individuel</span><b>${money(targetPerPerson)}</b></div><div><span>Paiements à vérifier</span><b>${pendingPayments}</b></div></div></section><section class="dash-card dash-actions"><div class="dash-card-head"><div><span class="dash-label">ACCÈS RAPIDES</span><h2>Actions opérationnelles</h2></div></div>
  <div class="action-grid">
   <a href="/activite"><b>Importer les quotas</b><span>Mettre à jour les statistiques de la semaine</span><i>→</i></a>
   <a href="/equipe"><b>Gérer l’équipe</b><span>Employés, rôles, statuts et informations</span><i>→</i></a>
