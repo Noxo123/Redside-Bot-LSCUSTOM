@@ -265,3 +265,5 @@ button:disabled{cursor:not-allowed!important;opacity:.55!important;transform:non
 .ls-empty-state b{font-size:13px}.ls-empty-state span{max-width:440px;color:var(--text-mid);font-size:11px;line-height:1.5;margin-top:4px}
 @media(max-width:700px){.ls-toast-stack{right:12px;bottom:12px;width:calc(100vw - 24px)}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
+.ls-context{display:flex;align-items:center;gap:12px;min-width:0}.ls-context-page{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ls-context-clock{font:600 10px 'JetBrains Mono',monospace;color:var(--gold);padding-left:12px;border-left:1px solid var(--border)}@media(max-width:600px){.ls-context-page{display:none}.ls-context-clock{border-left:0;padding-left:0}}
