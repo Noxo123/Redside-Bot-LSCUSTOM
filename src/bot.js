@@ -7,6 +7,7 @@ const commands=[new SlashCommandBuilder().setName('connexion').setDescription('R
 let readyPromise;function waitForReady(timeout=15000){if(client.isReady())return Promise.resolve();if(!readyPromise)readyPromise=new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Le bot Discord est encore en cours de connexion. Réessaie dans quelques secondes.')),timeout);client.once('ready',()=>{clearTimeout(timer);resolve()})}).finally(()=>{readyPromise=null});return readyPromise}
 async function fetchTextChannel(guild,id){if(!id)return null;const ch=await guild.channels.fetch(id).catch(()=>null);return ch?.isTextBased()?ch:null}
 const normRoleName=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+const ADMIN_USER_IDS=(process.env.LS_CUSTOM_ADMIN_USER_IDS||'1375953709388927077').split(',').map(s=>String(s).trim()).filter(Boolean);
 export async function getMemberAccess(guildId,userId){
   await waitForReady();
   const guild=client.guilds.cache.get(guildId)||await client.guilds.fetch(guildId).catch(()=>null);
