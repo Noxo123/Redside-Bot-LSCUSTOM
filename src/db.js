@@ -207,9 +207,31 @@ export function mergePartnershipRecords(sourceId,targetId,guildId){
   if(!source||!target)return target||source||null;
   const access=db.prepare('SELECT * FROM partnership_access WHERE partnership_id=?').get(source.id);
   const existingAccess=db.prepare('SELECT * FROM partnership_access WHERE partnership_id=?').get(target.id);
+  const pick=(a,b)=>a!==null&&a!==undefined&&String(a)!==''?a:b;
+  const merged={
+    company:pick(target.company,source.company),
+    contact:pick(target.contact,source.contact),
+    discord:pick(target.discord,source.discord),
+    website:pick(target.website,source.website),
+    status:target.status==='active'||source.status!=='active'?target.status:source.status,
+    startDate:pick(target.start_date,source.start_date),
+    endDate:pick(target.end_date,source.end_date),
+    offer:pick(target.offer,source.offer),
+    notes:pick(target.notes,source.notes),
+    ticketId:pick(target.ticket_id,source.ticket_id),
+    discordChannelId:pick(target.discord_channel_id,source.discord_channel_id),
+    price:target.price!=null?target.price:source.price,
+    proposalStatus:pick(target.proposal_status,source.proposal_status),
+    staffAcceptedAt:pick(target.staff_accepted_at,source.staff_accepted_at),
+    clientAcceptedAt:pick(target.client_accepted_at,source.client_accepted_at),
+    clientDeclinedAt:pick(target.client_declined_at,source.client_declined_at)
+  };
   const tx=db.transaction(()=>{
-    if(access&&!existingAccess)db.prepare('UPDATE partnership_access SET partnership_id=? WHERE id=?').run(target.id,access.id);
-    if(access&&existingAccess)db.prepare('DELETE FROM partnership_access WHERE id=?').run(access.id);
+    db.prepare('UPDATE partnerships SET company=?,contact=?,discord=?,website=?,status=?,start_date=?,end_date=?,offer=?,notes=?,ticket_id=?,discord_channel_id=?,price=?,proposal_status=?,staff_accepted_at=?,client_accepted_at=?,client_declined_at=?,updated_at=? WHERE id=? AND guild_id=?').run(merged.company,merged.contact,merged.discord,merged.website,merged.status,merged.startDate,merged.endDate,merged.offer,merged.notes,merged.ticketId,merged.discordChannelId,merged.price,merged.proposalStatus,merged.staffAcceptedAt,merged.clientAcceptedAt,merged.clientDeclinedAt,new Date().toISOString(),target.id,guildId);
+    if(access){
+      if(existingAccess)db.prepare('DELETE FROM partnership_access WHERE id=?').run(existingAccess.id);
+      db.prepare('UPDATE partnership_access SET partnership_id=? WHERE id=?').run(target.id,access.id);
+    }
     db.prepare('DELETE FROM partnerships WHERE id=? AND guild_id=?').run(source.id,guildId);
   });
   tx();
