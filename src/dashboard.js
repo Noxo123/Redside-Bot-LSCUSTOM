@@ -48,6 +48,7 @@ app.get('/dashboard',(req,res)=>res.sendFile(path.resolve('public/organisation.h
 app.get('/equipe',(req,res)=>res.sendFile(path.resolve('public/recrutements.html')));
 app.get('/activite',(req,res)=>res.sendFile(path.resolve('public/recrutement.html')));
 app.get('/partenariats',(req,res)=>res.sendFile(path.resolve('public/tracking.html')));
+app.get('/podium',(req,res)=>res.sendFile(path.resolve('public/podium.html')));
 app.get('/admin',(req,res)=>res.redirect('/dashboard'));
 app.get('/organisation',(req,res)=>res.sendFile(path.resolve('public/organisation.html')));
 app.get('/recrutements',(req,res)=>res.sendFile(path.resolve('public/public-recrutements.html')));
