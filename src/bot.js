@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, AttachmentBuilder } from 'discord.js';
-import db,{ upsertGuild, createRecruitment, setRecruitmentStatus, getApplications, getSetting, setSetting, audit, createLoginCode, invalidateLoginCodes,upsertEmployee,getEmployees,getPermissionsForDiscordRoles,upsertPartnership,getPartnershipByDiscordChannel} from './db.js';
+import db,{ upsertGuild, createRecruitment, setRecruitmentStatus, getApplications, getSetting, setSetting, audit, createLoginCode, invalidateLoginCodes,upsertEmployee,getEmployees,getPermissionsForDiscordRoles,upsertPartnership,getPartnershipByDiscordChannel,getTicketByDiscordChannel,createTicket,setTicketDiscordChannel} from './db.js';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 export const client=new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMembers,GatewayIntentBits.GuildMessages,GatewayIntentBits.MessageContent]});
@@ -53,14 +53,24 @@ export async function sendPartnershipPortalMessage({guildId,channelId,content,us
 async function syncPartnershipTicket(channel){
   const categoryId=getSetting(channel.guild.id,'partnership_category')||process.env.PARTNERSHIP_TICKET_CATEGORY_ID||'1549137158919430255';
   if(!channel?.guild||channel.parentId!==categoryId)return;
-  if(getPartnershipByDiscordChannel(channel.guild.id,channel.id))return;
   let creatorId=null;
   for(const [id,ow] of channel.permissionOverwrites.cache){if(ow.type===1&&id!==channel.guild.id){creatorId=id;break}}
   const creator=creatorId?await channel.guild.members.fetch(creatorId).catch(()=>null):null;
   const company=String(channel.name||'Partenariat').replace(/[-_]+/g,' ').slice(0,150);
-  upsertPartnership({guildId:channel.guild.id,company,contact:creator?.displayName||creator?.user?.username||'Demandeur Ticket Tool',discord:creatorId||'',status:'pending',startDate:new Date().toISOString().slice(0,10),offer:'',notes:'Créé automatiquement depuis Ticket Tool : '+channel.url,discordChannelId:channel.id});
+  let localTicket=getTicketByDiscordChannel(channel.guild.id,channel.id);
+  if(!localTicket){
+    localTicket=createTicket({guildId:channel.guild.id,type:'partnership',userId:creatorId||null,username:creator?.displayName||creator?.user?.username||'Demandeur Ticket Tool',subject:company,details:{source:'ticket-tool',discordChannelId:channel.id,url:channel.url}});
+    localTicket=setTicketDiscordChannel(localTicket.id,channel.guild.id,channel.id);
+  }
+  const existing=getPartnershipByDiscordChannel(channel.guild.id,channel.id);
+  if(existing){
+    if(!existing.ticket_id)upsertPartnership({id:existing.id,guildId:channel.guild.id,company:existing.company,contact:existing.contact,discord:existing.discord,website:existing.website,status:existing.status,startDate:existing.start_date,endDate:existing.end_date,offer:existing.offer,notes:existing.notes,ticketId:localTicket.id,discordChannelId:channel.id});
+    await ensurePartnershipWebhook(channel);
+    return;
+  }
+  upsertPartnership({guildId:channel.guild.id,company,contact:creator?.displayName||creator?.user?.username||'Demandeur Ticket Tool',discord:creatorId||'',status:'pending',startDate:new Date().toISOString().slice(0,10),offer:'',notes:'Créé automatiquement depuis Ticket Tool : '+channel.url,ticketId:localTicket.id,discordChannelId:channel.id});
   await ensurePartnershipWebhook(channel);
-  audit(channel.guild.id,creatorId,'partnership.ticket_created',channel.id);
+  audit(channel.guild.id,creatorId||null,'partnership.ticket_created',String(localTicket.id));
 }
 client.on('channelCreate',channel=>{syncPartnershipTicket(channel).catch(e=>console.error('Sync partenariat Ticket Tool:',e.message))});
 client.once('ready',()=>{console.log(`🤖 Connecté : ${client.user.tag} | ${client.guilds.cache.size} serveur(s)`);for(const guild of client.guilds.cache.values())upsertGuild(guild)});client.on('guildCreate',g=>upsertGuild(g));
