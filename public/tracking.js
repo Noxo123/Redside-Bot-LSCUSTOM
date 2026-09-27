@@ -17,7 +17,7 @@ function messageHtml(m){
 function updateConversationMessages(messages){
  const box=document.querySelector('#partnerMessages');if(!box)return;
  const current=box.scrollHeight-box.scrollTop-box.clientHeight<80;
- box.innerHTML=messages?.length?messages.map(messageHtml).join(''):'<div class="partner-empty">Aucun message dans ce ticket.</div>';
+ box.innerHTML=messages?.length?messages.map(messageHtml).join(''):'<div class="partner-empty">Aucun message dans ce ticket.</div>';const finalizeChat=box.querySelector('.proposal-finalize-chat');if(finalizeChat)finalizeChat.onclick=async()=>{if(!confirm('Le partenaire a accepté. Confirmer définitivement ce partenariat ?'))return;finalizeChat.disabled=true;try{await api('/api/employee/partnerships/'+selected+'/finalize',{method:'POST'});const x=await api('/api/employee/partnerships/'+selected+'/conversation');renderConversation(x)}catch(e){alert(e.message);finalizeChat.disabled=false}};
  if(current)box.scrollTop=box.scrollHeight;
 }
 function openProposalModal(p){
