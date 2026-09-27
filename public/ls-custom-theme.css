@@ -168,3 +168,31 @@ body>[class*="min-h-screen"][class*="lg:grid"]{grid-template-columns:270px minma
 body>[class*="min-h-screen"][class*="lg:grid"]{grid-template-columns:270px minmax(0,1fr)!important}
 body>[class*="min-h-screen"][class*="lg:grid"]>main>div{max-width:1500px!important}
 @media(max-width:900px){body>[class*="min-h-screen"][class*="lg:grid"]{grid-template-columns:1fr!important}body>[class*="min-h-screen"][class*="lg:grid"]>aside{height:auto;position:sticky}body>[class*="min-h-screen"][class*="lg:grid"]>aside>div{height:auto!important}}
+
+/* ===== Shared LS Custom application shell ===== */
+:root{--ls-radius:9px;--ls-surface:#0f1012;--ls-surface-2:#141518;--ls-line:rgba(255,255,255,.075)}
+body{background:#08090a!important}
+body:before{background:radial-gradient(ellipse at 50% -10%,rgba(212,160,23,.045),transparent 55%)!important}
+body:after{display:none!important}
+body>[class*="min-h-screen"][class*="lg:grid"]{display:grid!important;grid-template-columns:270px minmax(0,1fr)!important;min-height:100vh}
+body>[class*="min-h-screen"][class*="lg:grid"]>aside{position:sticky!important;top:0!important;height:100vh!important;background:#0b0c0e!important;border-right:1px solid var(--ls-line)!important;border-bottom:0!important}
+body>[class*="min-h-screen"][class*="lg:grid"]>aside>div{height:100%!important;padding:22px 16px!important;display:flex!important;flex-direction:column!important}
+body>[class*="min-h-screen"][class*="lg:grid"]>aside nav{display:grid!important;gap:4px!important}
+body>[class*="min-h-screen"][class*="lg:grid"]>aside nav a{border:1px solid transparent!important;border-radius:7px!important;background:transparent!important;color:#777b80!important;padding:10px 11px!important}
+body>[class*="min-h-screen"][class*="lg:grid"]>aside nav a:hover{background:#141518!important;color:#eee!important;border-color:var(--ls-line)!important}
+body>[class*="min-h-screen"][class*="lg:grid"]>aside nav a.border-zinc-700{background:var(--gold-dim)!important;border-color:var(--border-gold)!important;color:var(--gold)!important}
+body>[class*="min-h-screen"][class*="lg:grid"]>aside #user{border-radius:8px!important;background:#101114!important;border-color:var(--ls-line)!important}
+body>[class*="min-h-screen"][class*="lg:grid"]>main{padding:38px 38px 70px!important}
+body>[class*="min-h-screen"][class*="lg:grid"]>main>div{width:100%!important;max-width:1500px!important}
+.org-panel,.org-card,.dash-card,.quota-table-wrap,.podium-workspace,.quota-summary{border-radius:9px!important;border-color:var(--ls-line)!important;background:#101114!important}
+.org-panel{box-shadow:none!important}
+button,a,input,select,textarea{border-radius:7px}
+button.primary,button.bg-white,a.bg-white{background:var(--gold)!important;color:#090909!important}
+.dash-grid-triple{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:1200px){.dash-grid-triple{grid-template-columns:1fr 1fr}.dash-grid-triple>.dash-card:last-child{grid-column:1/-1}}
+@media(max-width:900px){body>[class*="min-h-screen"][class*="lg:grid"]{display:block!important}body>[class*="min-h-screen"][class*="lg:grid"]>aside{position:sticky!important;height:auto!important;min-height:64px!important}body>[class*="min-h-screen"][class*="lg:grid"]>aside>div{height:auto!important;min-height:64px!important;flex-direction:row!important;align-items:center!important;overflow-x:auto}body>[class*="min-h-screen"][class*="lg:grid"]>aside nav{display:flex!important;flex:1!important;overflow-x:auto}body>[class*="min-h-screen"][class*="lg:grid"]>aside #logout{margin:0!important;white-space:nowrap}body>[class*="min-h-screen"][class*="lg:grid"]>main{padding:24px 16px 55px!important}}
+@media(max-width:700px){.dash-grid-triple{grid-template-columns:1fr}.dash-grid-triple>.dash-card:last-child{grid-column:auto}.dash-grid-main{grid-template-columns:1fr}}
+/* Shared login / agenda surface */
+.login-shell{min-height:100vh;display:grid;place-items:center;padding:20px;background:#08090a}
+.login-card,.agenda-login-card{width:min(470px,100%);padding:30px;border:1px solid var(--ls-line);border-radius:10px;background:#101114}
+.login-card input,.agenda-login-card input{width:100%;box-sizing:border-box;padding:13px;border-radius:7px;background:#090a0b!important;border:1px solid var(--ls-line)!important;color:var(--text)!important}
