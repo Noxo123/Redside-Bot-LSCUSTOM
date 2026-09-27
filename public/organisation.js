@@ -15,7 +15,10 @@ function render(data){
  const targetPerPerson=20000000;
  const employees=(rows||[]).filter(r=>r.status!=='inactive');
  const presentCount=employees.length || Number(overview?.employees||0) || 0;
- const reachedCount=employees.filter(r=>(Number(r.montant_personnalisations)||0)>=targetPerPerson).length;\n const halfwayCount=employees.filter(r=>(Number(r.montant_personnalisations)||0)>=targetPerPerson*.5).length;\n const quotaAverage=presentCount?Math.round(employees.reduce((n,r)=>n+(Number(r.montant_personnalisations)||0),0)/presentCount):0;\n const pendingPayments=(partnerships||[]).filter(p=>p.status==='active'&&p.payment_status!=='paid').length;
+ const reachedCount=employees.filter(r=>(Number(r.montant_personnalisations)||0)>=targetPerPerson).length;
+ const halfwayCount=employees.filter(r=>(Number(r.montant_personnalisations)||0)>=targetPerPerson*.5).length;
+ const quotaAverage=presentCount?Math.round(employees.reduce((n,r)=>n+(Number(r.montant_personnalisations)||0),0)/presentCount):0;
+ const pendingPayments=(partnerships||[]).filter(p=>p.status==='active'&&p.payment_status!=='paid').length;
  const customPct=presentCount>0?Math.min(100,Math.round(reachedCount/presentCount*100)):0;
  const activityTotal=r=>Number(r.appels||0)+Number(r.reparations||0)+Number(r.fourrieres||0)+Number(r.personnalisations||0)+Number(r.factures||0);
  const ranked=[...(rows||[])].sort((a,b)=>(Number(b.montant_personnalisations)||0)-(Number(a.montant_personnalisations)||0)||activityTotal(b)-activityTotal(a)).slice(0,6);
