@@ -179,6 +179,29 @@ export function getPartnerships(guildId,status=null){return status?db.prepare('S
 export function getPartnership(id,guildId){return db.prepare('SELECT * FROM partnerships WHERE id=? AND guild_id=?').get(id,guildId)}
 export function upsertPartnership(d){const now=new Date().toISOString();if(d.id){db.prepare('UPDATE partnerships SET company=?,contact=?,discord=?,website=?,status=?,start_date=?,end_date=?,offer=?,notes=?,ticket_id=?,discord_channel_id=?,updated_at=? WHERE id=? AND guild_id=?').run(d.company,d.contact||'',d.discord||'',d.website||'',d.status||'active',d.startDate||null,d.endDate||null,d.offer||'',d.notes||'',d.ticketId||null,d.discordChannelId||null,now,d.id,d.guildId);return getPartnership(d.id,d.guildId)}const r=db.prepare('INSERT INTO partnerships(guild_id,company,contact,discord,website,status,start_date,end_date,offer,notes,ticket_id,discord_channel_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(d.guildId,d.company,d.contact||'',d.discord||'',d.website||'',d.status||'active',d.startDate||null,d.endDate||null,d.offer||'',d.notes||'',d.ticketId||null,d.discordChannelId||null,now,now);return getPartnership(r.lastInsertRowid,d.guildId)}
 export function getPartnershipByDiscordChannel(guildId,channelId){return db.prepare('SELECT * FROM partnerships WHERE guild_id=? AND discord_channel_id=?').get(guildId,channelId)}
+export function findMatchingPartnership(guildId,{company='',discord=''}={}){
+  const rows=getPartnerships(guildId);
+  const norm=v=>String(v||'').trim().toLocaleLowerCase('fr-FR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+  const companyKey=norm(company);
+  const discordKey=String(discord||'').trim();
+  return rows
+    .filter(p=>(discordKey&&String(p.discord||'').trim()===discordKey)||(companyKey&&norm(p.company)===companyKey))
+    .sort((a,b)=>Number(a.status!=='active')-Number(b.status!=='active')||Number(!!b.discord_channel_id)-Number(!!a.discord_channel_id)||Number(b.id)-Number(a.id))[0]||null;
+}
+export function mergePartnershipRecords(sourceId,targetId,guildId){
+  if(Number(sourceId)===Number(targetId))return getPartnership(targetId,guildId);
+  const source=getPartnership(sourceId,guildId),target=getPartnership(targetId,guildId);
+  if(!source||!target)return target||source||null;
+  const access=db.prepare('SELECT * FROM partnership_access WHERE partnership_id=?').get(source.id);
+  const existingAccess=db.prepare('SELECT * FROM partnership_access WHERE partnership_id=?').get(target.id);
+  const tx=db.transaction(()=>{
+    if(access&&!existingAccess)db.prepare('UPDATE partnership_access SET partnership_id=? WHERE id=?').run(target.id,access.id);
+    if(access&&existingAccess)db.prepare('DELETE FROM partnership_access WHERE id=?').run(access.id);
+    db.prepare('DELETE FROM partnerships WHERE id=? AND guild_id=?').run(source.id,guildId);
+  });
+  tx();
+  return getPartnership(target.id,guildId);
+}
 export function deletePartnership(id,guildId){const r=db.prepare('DELETE FROM partnerships WHERE id=? AND guild_id=?').run(id,guildId);return r.changes>0}
 export function createPartnershipAccess(partnershipId,tokenHash){const now=new Date().toISOString();db.prepare('INSERT INTO partnership_access(partnership_id,token_hash,created_at) VALUES(?,?,?) ON CONFLICT(partnership_id) DO UPDATE SET token_hash=excluded.token_hash,created_at=excluded.created_at,last_used_at=NULL').run(partnershipId,tokenHash,now);return db.prepare('SELECT * FROM partnership_access WHERE partnership_id=?').get(partnershipId)}
 export function getPartnershipByAccessHash(tokenHash){const r=db.prepare('SELECT p.*,pa.token_hash FROM partnership_access pa JOIN partnerships p ON p.id=pa.partnership_id WHERE pa.token_hash=?').get(tokenHash);if(r)db.prepare('UPDATE partnership_access SET last_used_at=? WHERE partnership_id=?').run(new Date().toISOString(),r.id);return r||null}
