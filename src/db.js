@@ -236,7 +236,7 @@ export function mergePartnershipRecords(sourceId,targetId,guildId){
     staffAcceptedAt:pick(target.staff_accepted_at,source.staff_accepted_at),
     clientAcceptedAt:pick(target.client_accepted_at,source.client_accepted_at),
     clientDeclinedAt:pick(target.client_declined_at,source.client_declined_at),
-    paymentStatus:pick(target.payment_status,source.payment_status),
+    paymentStatus:(target.payment_status==='paid'||source.payment_status==='paid')?'paid':'unpaid',
     paymentProofPath:pick(target.payment_proof_path,source.payment_proof_path),
     paymentProofUploadedAt:pick(target.payment_proof_uploaded_at,source.payment_proof_uploaded_at),
     paymentProofUploadedBy:pick(target.payment_proof_uploaded_by,source.payment_proof_uploaded_by),
