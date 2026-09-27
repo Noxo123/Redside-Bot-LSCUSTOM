@@ -62,16 +62,17 @@ async function ensurePartnershipWebhook(channel){
     return hook;
   }catch(e){console.error('Webhook partenariat:',e.message);return null}
 }
-export async function sendPartnershipPortalMessage({guildId,channelId,content,username='Partenaire',avatarURL=null}){
+export async function sendPartnershipPortalMessage({guildId,channelId,content,username='Partenaire',avatarURL=null,filePath=null,fileName=null}){
   await waitForReady();
   const guild=client.guilds.cache.get(guildId)||await client.guilds.fetch(guildId).catch(()=>null);
   const channel=guild?await guild.channels.fetch(channelId).catch(()=>null):null;
   if(!channel?.isTextBased?.())throw new Error('Salon de partenariat introuvable.');
   const hook=await ensurePartnershipWebhook(channel);
-  const payload={content:String(content).slice(0,2000),username:String(username).slice(0,80),allowedMentions:{parse:[]}};
+  const payload={content:String(content||'').slice(0,2000),username:String(username).slice(0,80),allowedMentions:{parse:[]}};
   if(avatarURL)payload.avatarURL=avatarURL;
+  if(filePath){if(!fs.existsSync(filePath))throw new Error('Pièce jointe introuvable.');payload.files=[{attachment:filePath,name:String(fileName||'piece-jointe').slice(0,100)}]}
   if(hook)return hook.send(payload);
-  return channel.send({content:'**'+String(username).replaceAll('**','')+'**\n'+String(content).slice(0,1900),allowedMentions:{parse:[]}});
+  return channel.send({content:'**'+String(username).replaceAll('**','')+'**\n'+String(content||'').slice(0,1900),files:payload.files||[],allowedMentions:{parse:[]}});
 }
 async function syncPartnershipTicket(channel){
   const categoryId=getSetting(channel.guild.id,'partnership_category')||process.env.PARTNERSHIP_TICKET_CATEGORY_ID||'1549137158919430255';
