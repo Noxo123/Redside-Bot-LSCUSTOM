@@ -194,53 +194,6 @@ app.get('/api/employee/partnerships/:id/payment-proof',playerAuth,async(req,res)
 }catch(e){console.error(e);res.sendStatus(500)}});
 
 app.post('/api/employee/partnerships/:id/payment-proof',playerAuth,paymentUploadRate,(req,res,next)=>{
- if(!validPaymentUploadToken(req))return res.status(403).json({error:'Jeton de sécurité de téléversement invalide.'});
- next();
-},paymentProofUpload.single('proof'),async(req,res)=>{let newPath=null;try{
- const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);
- if(!a||!(a.isAdmin||a.permissions.includes('partnerships')||a.permissions.includes('all')))return res.sendStatus(403);
- const p=getPartnership(Number(req.params.id),g);if(!p)return res.status(404).json({error:'Partenariat introuvable.'});
- if(p.proposal_status!=='accepted')return res.status(409).json({error:'Le partenariat doit être définitivement accepté avant d’envoyer une preuve.'});
- if(!req.file)return res.status(400).json({error:'Aucune preuve envoyée.'});
- newPath=req.file.path;
- const detected=paymentProofMime(newPath);
- if(!detected||detected!==req.file.mimetype){fs.rmSync(newPath,{force:true});return res.status(400).json({error:'Fichier refusé : type réel invalide.'});
- }
- const sha256=crypto.createHash('sha256').update(fs.readFileSync(newPath)).digest('hex');
- const oldPath=p.payment_proof_path?safePaymentProofPath(path.resolve(p.payment_proof_path)):null;
- const uploaderName=a.displayName||a.username||req.session.player.global_name||req.session.player.username||'LS CUSTOM';
- const updated=setPartnershipPaymentProof(p.id,g,{path:newPath,uploadedBy:req.session.player.id,uploaderName,mime:detected,originalName:path.basename(req.file.originalname).slice(0,180),sha256});
- if(oldPath&&oldPath!==newPath&&fs.existsSync(oldPath))fs.rmSync(oldPath,{force:true});
- audit(g,req.session.player.id,'partnership.payment_proof_uploaded',JSON.stringify({partnershipId:p.id,sha256}));
- res.status(201).json(updated);
-}catch(e){if(newPath&&fs.existsSync(newPath))fs.rmSync(newPath,{force:true});console.error(e);res.status(500).json({error:'Impossible d’enregistrer la preuve de paiement.'})}});
-
-app.get('/api/client/partnership/payment-proof',clientPartnershipAuth,async(req,res)=>{try{
- const p=getPartnership(req.session.clientPartnership.id,req.session.clientPartnership.guildId);if(!p?.payment_proof_path)return res.sendStatus(404);
- const file=safePaymentProofPath(path.resolve(p.payment_proof_path));if(!file||!fs.existsSync(file))return res.sendStatus(404);
- res.set({'Content-Type':p.payment_proof_mime||'application/octet-stream','Content-Disposition':'inline; filename="preuve-paiement"','X-Content-Type-Options':'nosniff','Cache-Control':'private, no-store'});
- fs.createReadStream(file).pipe(res);
-}catch(e){console.error(e);res.sendStatus(500)}});
-
- if(!validPaymentUploadToken(req))return res.status(403).json({error:'Jeton de sécurité de téléversement invalide.'});
- next();
-},paymentProofUpload.single('proof'),async(req,res)=>{let newPath=null;try{
- const p=getPartnership(req.session.clientPartnership.id,req.session.clientPartnership.guildId);if(!p)return res.status(404).json({error:'Partenariat introuvable.'});
- if(p.proposal_status!=='accepted')return res.status(409).json({error:'Le partenariat doit être définitivement accepté avant d’envoyer une preuve.'});
- if(!req.file)return res.status(400).json({error:'Aucune preuve envoyée.'});
- newPath=req.file.path;
- const detected=paymentProofMime(newPath);
- if(!detected||detected!==req.file.mimetype){fs.rmSync(newPath,{force:true});return res.status(400).json({error:'Fichier refusé : type réel invalide.'});
- }
- const sha256=crypto.createHash('sha256').update(fs.readFileSync(newPath)).digest('hex');
- const oldPath=p.payment_proof_path?safePaymentProofPath(path.resolve(p.payment_proof_path)):null;
- const u=req.session.clientPartnership.user;
- const uploaderName=u?.global_name||u?.username||p.contact||'Partenaire';
- const updated=setPartnershipPaymentProof(p.id,p.guild_id,{path:newPath,uploadedBy:u?.id||null,uploaderName,mime:detected,originalName:path.basename(req.file.originalname).slice(0,180),sha256});
- if(oldPath&&oldPath!==newPath&&fs.existsSync(oldPath))fs.rmSync(oldPath,{force:true});
- audit(p.guild_id,u?.id||null,'partnership.payment_proof_uploaded',JSON.stringify({partnershipId:p.id,sha256}));
- res.status(201).json(updated);
-}catch(e){if(newPath&&fs.existsSync(newPath))fs.rmSync(newPath,{force:true});console.error(e);res.status(500).json({error:'Impossible d’enregistrer la preuve de paiement.'})}});
 
 app.get('/api/employee/partnerships/:id/conversation',playerAuth,async(req,res)=>{try{const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);if(!a)return res.status(403).json({error:'Accès refusé.'});if(!(a.isAdmin||a.permissions.includes('partnerships')||a.permissions.includes('all')))return res.status(403).json({error:'Accès partenariats refusé.'});const p=getPartnership(Number(req.params.id),g);if(!p)return res.status(404).json({error:'Partenariat introuvable.'});res.json({partnership:{id:p.id,company:p.company,contact:p.contact,status:p.status,discord_channel_id:p.discord_channel_id},messages:await partnershipMessages(p)})}catch(e){console.error(e);res.status(500).json({error:'Impossible de charger la conversation.'})}});
 app.post('/api/employee/partnerships/:id/attachment',playerAuth,paymentUploadRate,(req,res,next)=>{if(!validPaymentUploadToken(req))return res.status(403).json({error:'Jeton de sécurité invalide.'});next()},partnershipFileUpload.single('file'),async(req,res)=>{let filePath=null;try{const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);if(!a||!(a.isAdmin||a.permissions.includes('partnerships')||a.permissions.includes('all')))return res.status(403).json({error:'Accès partenariats refusé.'});const p=getPartnership(Number(req.params.id),g);if(!p?.discord_channel_id)return res.status(409).json({error:'Aucun ticket Discord associé.'});if(!req.file)return res.status(400).json({error:'Aucun fichier envoyé.'});filePath=req.file.path;const real=paymentProofMime(filePath);if(!real||real!==req.file.mimetype){fs.rmSync(filePath,{force:true});return res.status(400).json({error:'Type de fichier invalide.'});}const name=a.displayName||a.username||'LS CUSTOM';const label=clean(req.body.caption,500)||'📎 Pièce jointe LS CUSTOM';await sendPartnershipPortalMessage({guildId:g,channelId:p.discord_channel_id,content:label,username:'LS CUSTOM • '+name,filePath,fileName:path.basename(req.file.originalname).slice(0,100)});audit(g,req.session.player.id,'partnership.attachment',JSON.stringify({partnershipId:p.id,type:real,name:path.basename(req.file.originalname).slice(0,100)}));res.status(201).json({ok:true,messages:await partnershipMessages(p)})}catch(e){if(filePath&&fs.existsSync(filePath))fs.rmSync(filePath,{force:true});console.error(e);res.status(500).json({error:'Impossible d’envoyer la pièce jointe.'})}});
