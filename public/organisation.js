@@ -74,12 +74,12 @@ async function main(){
  try{
   const r=await api('/api/session/access');
   const access=r.access;
-  $('#user').textContent=(r.user.global_name||r.user.username)+' — '+(access.isAdmin?'Gérant légal / Développeur':(access.roles||[]).map(x=>x.name).join(' • ')||'Employé');
+  const userEl=$('#user'); if(userEl) userEl.textContent=(r.user.global_name||r.user.username)+' — '+(access.isAdmin?'Gérant légal / Développeur':(access.roles||[]).map(x=>x.name).join(' • ')||'Employé');
   document.querySelectorAll('[data-permission]').forEach(a=>{if(!(access.isAdmin||access.permissions.includes(a.dataset.permission)||access.permissions.includes('all')))a.remove()});
   if(access.isAdmin)$('#developerNav').classList.remove('hidden');
   $('#logout').onclick=async()=>{await api('/auth/player/logout',{method:'POST'});location.href='/connexion'};
   const [start,end]=week();
-  $('#periodLabel').textContent=start+' → '+end;
+  const periodEl=$('#periodLabel'); if(periodEl) periodEl.textContent=start+' → '+end;
   const results=await Promise.all([
    api('/api/employee/overview'),
    api('/api/employee/activity?start='+start+'&end='+end),
@@ -88,7 +88,7 @@ async function main(){
    api('/api/employee/agenda')
   ]);
   render({overview:results[0],rows:results[1].rows||[],team:results[2]||[],partnerships:results[3]||[],absences:results[4]||[]});
-  $('#refreshLabel').textContent='Mis à jour à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  const refreshEl=$('#refreshLabel'); if(refreshEl) refreshEl.textContent='Mis à jour à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
  }catch(e){$('#content').innerHTML='<div class="dash-error">'+esc(e.message)+'</div>'}
 }
 main();
