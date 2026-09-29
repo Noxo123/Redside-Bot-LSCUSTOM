@@ -286,7 +286,7 @@ export function saveQuotaImport(d){
  const tx=db.transaction(()=>{
    const batch=db.prepare('INSERT INTO quota_imports(guild_id,import_uid,source_hash,period_start,period_end,imported_by,imported_by_name,imported_at,source_text,status) VALUES(?,?,?,?,?,?,?,?,?,?)').run(d.guildId,importUid,sourceHash,d.periodStart,d.periodEnd,d.importedBy||null,d.importedByName||null,importedAt,sourceText,'processing');
    const batchId=Number(batch.lastInsertRowid);
-   const imported=[],skipped=[],cleaned=[];
+   const imported=[],created=[],skipped=[],cleaned=[];
    const employees=getEmployees(d.guildId);
    const employeeGroups=new Map();
    for(const e of employees){
@@ -317,6 +317,7 @@ export function saveQuotaImport(d){
          notes:'Employé créé automatiquement lors d’un import RH.'
        });
        employeeGroups.set(key,[employee]);
+       created.push(employee.display_name||employee.username);
      }
      if(!employee){
        skipped.push({name:row.name,reason:'Employé introuvable.'});
@@ -325,11 +326,11 @@ export function saveQuotaImport(d){
      upsertQuota({...row,guildId:d.guildId,employeeId:employee.id,periodStart:d.periodStart,periodEnd:d.periodEnd,importBatchId:batchId,importedAt,note:'Import RH des interventions'});
      imported.push({name:row.name,employeeId:employee.id,role:employee.role_name||employee.role_key||null});
    }
-   db.prepare('UPDATE quota_imports SET imported_count=?,created_count=?,skipped_count=?,status=? WHERE id=?').run(imported.length,imported.filter(x=>String(x.employeeId||'')==='').length,skipped.length,'completed',batchId);
-   return {batchId,importUid,imported,created:[],skipped,cleaned};
+   db.prepare('UPDATE quota_imports SET imported_count=?,created_count=?,skipped_count=?,status=? WHERE id=?').run(imported.length,created.length,skipped.length,'completed',batchId);
+   return {batchId,importUid,imported,created,skipped,cleaned};
  });
  const result=tx();
- audit(d.guildId,d.importedBy||null,'quota.import.completed',JSON.stringify({batchId:result.batchId,importUid:result.importUid,periodStart:d.periodStart,periodEnd:d.periodEnd,count:result.imported.length,created:0,skipped:result.skipped.length,cleaned:result.cleaned.length,importedAt}));
+ audit(d.guildId,d.importedBy||null,'quota.import.completed',JSON.stringify({batchId:result.batchId,importUid:result.importUid,periodStart:d.periodStart,periodEnd:d.periodEnd,count:result.imported.length,created:result.created.length,skipped:result.skipped.length,cleaned:result.cleaned.length,importedAt}));
  return {...getQuotaImport(result.batchId,d.guildId),...result,duplicate:false,importedAt};
 }
 export function getQuotaEntry(id,guildId){return db.prepare('SELECT q.*,e.username,e.display_name,e.role_key,h.name AS role_name,e.quota_target,e.quota_enabled FROM quota_entries q JOIN employees e ON e.id=q.employee_id LEFT JOIN hierarchy_roles h ON h.guild_id=e.guild_id AND h.role_key=e.role_key WHERE q.id=? AND q.guild_id=?').get(id,guildId)}
