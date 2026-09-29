@@ -430,7 +430,8 @@ export function purgeEmployees(guildId){
  });
  return tx();
 }
-\nexport function organisationStats(guildId){const employees=getEmployees(guildId);const active=employees.filter(x=>x.status==='active');const partnerships=getPartnerships(guildId);const now=new Date().toISOString().slice(0,10);const current=partnerships.filter(x=>x.status==='active'&&(!x.end_date||x.end_date>=now));return{employees:active.length,allEmployees:employees.length,roles:getHierarchy(guildId).length,partnerships:current.length,allPartnerships:partnerships.length,absences:getAbsences(guildId).filter(x=>x.end_date>=now).length,quotaTracked:active.filter(x=>x.quota_enabled).length}}
+
+export function organisationStats(guildId){const employees=getEmployees(guildId);const active=employees.filter(x=>x.status==='active');const partnerships=getPartnerships(guildId);const now=new Date().toISOString().slice(0,10);const current=partnerships.filter(x=>x.status==='active'&&(!x.end_date||x.end_date>=now));return{employees:active.length,allEmployees:employees.length,roles:getHierarchy(guildId).length,partnerships:current.length,allPartnerships:partnerships.length,absences:getAbsences(guildId).filter(x=>x.end_date>=now).length,quotaTracked:active.filter(x=>x.quota_enabled).length}}
 
 
 /* ─────────────────────────────────────────────────────────────
