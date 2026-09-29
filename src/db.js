@@ -269,3 +269,79 @@ export function getPartnershipByAccessHash(tokenHash){const r=db.prepare('SELECT
 
 export function purgeGuildData(guildId,{partnershipsOnly=false}={}){ensurePartnershipTermsColumns();const tx=db.transaction(()=>{if(partnershipsOnly){db.prepare('DELETE FROM partnership_access WHERE partnership_id IN (SELECT id FROM partnerships WHERE guild_id=?)').run(guildId);const r=db.prepare('DELETE FROM partnerships WHERE guild_id=?').run(guildId);return {partnerships:r.changes}}db.prepare('DELETE FROM partnership_access WHERE partnership_id IN (SELECT id FROM partnerships WHERE guild_id=?)').run(guildId);const counts={partnerships:db.prepare('DELETE FROM partnerships WHERE guild_id=?').run(guildId).changes,quota_entries:db.prepare('DELETE FROM quota_entries WHERE guild_id=?').run(guildId).changes,employees:db.prepare('DELETE FROM employees WHERE guild_id=?').run(guildId).changes,absences:db.prepare('DELETE FROM absences WHERE guild_id=?').run(guildId).changes,applications:db.prepare('DELETE FROM applications WHERE guild_id=?').run(guildId).changes,recruitments:db.prepare('DELETE FROM recruitments WHERE guild_id=?').run(guildId).changes,tickets:db.prepare('DELETE FROM tickets WHERE guild_id=?').run(guildId).changes,login_codes:db.prepare('DELETE FROM login_codes WHERE guild_id=?').run(guildId).changes,application_security:db.prepare('DELETE FROM application_security WHERE guild_id=?').run(guildId).changes};return counts});return tx()}
 export function organisationStats(guildId){const employees=getEmployees(guildId);const active=employees.filter(x=>x.status==='active');const partnerships=getPartnerships(guildId);const now=new Date().toISOString().slice(0,10);const current=partnerships.filter(x=>x.status==='active'&&(!x.end_date||x.end_date>=now));return{employees:active.length,allEmployees:employees.length,roles:getHierarchy(guildId).length,partnerships:current.length,allPartnerships:partnerships.length,absences:getAbsences(guildId).filter(x=>x.end_date>=now).length,quotaTracked:active.filter(x=>x.quota_enabled).length}}
+
+
+/* ─────────────────────────────────────────────────────────────
+   ANNONCES & MESSAGERIE PRIVÉE
+   ───────────────────────────────────────────────────────────── */
+db.exec(`
+CREATE TABLE IF NOT EXISTS announcements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id TEXT NOT NULL,
+  audience TEXT NOT NULL DEFAULT 'employees',
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  author_id TEXT,
+  author_name TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_announcements_guild_created ON announcements(guild_id,created_at);
+CREATE TABLE IF NOT EXISTS announcement_reads (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  announcement_id INTEGER NOT NULL,
+  recipient_type TEXT NOT NULL,
+  recipient_id TEXT NOT NULL,
+  read_at TEXT NOT NULL,
+  UNIQUE(announcement_id,recipient_type,recipient_id),
+  FOREIGN KEY(announcement_id) REFERENCES announcements(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_announcement_reads_recipient ON announcement_reads(recipient_type,recipient_id);
+CREATE TABLE IF NOT EXISTS private_mail (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id TEXT NOT NULL,
+  conversation_key TEXT NOT NULL,
+  sender_type TEXT NOT NULL,
+  sender_id TEXT NOT NULL,
+  sender_name TEXT NOT NULL,
+  recipient_type TEXT NOT NULL,
+  recipient_id TEXT NOT NULL,
+  recipient_name TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  read_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_private_mail_conversation ON private_mail(guild_id,conversation_key,id);
+CREATE INDEX IF NOT EXISTS idx_private_mail_recipient ON private_mail(guild_id,recipient_type,recipient_id,read_at);
+`);
+const mailPartyKey=(type,id)=>String(type)+':'+String(id);
+export function mailConversationKey(aType,aId,bType,bId){return [mailPartyKey(aType,aId),mailPartyKey(bType,bId)].sort().join('|')}
+export function createAnnouncement(d){const now=new Date().toISOString();const r=db.prepare('INSERT INTO announcements(guild_id,audience,title,body,author_id,author_name,created_at) VALUES(?,?,?,?,?,?,?)').run(d.guildId,d.audience,d.title,d.body,d.authorId||null,d.authorName||'LS CUSTOM',now);return db.prepare('SELECT * FROM announcements WHERE id=?').get(r.lastInsertRowid)}
+export function getAnnouncements(guildId,audience='employee',recipientType=null,recipientId=null,limit=100){
+  const allowed=audience==='client'?['client','all']:audience==='employee'?['employees','all']:['employees','client','all'];
+  const qs=allowed.map(()=>'?').join(',');
+  return db.prepare(`SELECT a.*,CASE WHEN ar.id IS NULL THEN 0 ELSE 1 END AS is_read FROM announcements a LEFT JOIN announcement_reads ar ON ar.announcement_id=a.id AND ar.recipient_type=? AND ar.recipient_id=? WHERE a.guild_id=? AND a.audience IN (${qs}) ORDER BY a.id DESC LIMIT ?`)
+    .all(recipientType||audience,recipientId||'',guildId,...allowed,Math.min(Math.max(Number(limit)||100,1),200));
+}
+export function markAnnouncementRead(id,guildId,recipientType,recipientId){const exists=db.prepare('SELECT id FROM announcements WHERE id=? AND guild_id=?').get(id,guildId);if(!exists)return false;db.prepare('INSERT INTO announcement_reads(announcement_id,recipient_type,recipient_id,read_at) VALUES(?,?,?,?) ON CONFLICT(announcement_id,recipient_type,recipient_id) DO UPDATE SET read_at=excluded.read_at').run(id,recipientType,String(recipientId),new Date().toISOString());return true}
+export function deleteAnnouncement(id,guildId){const r=db.prepare('DELETE FROM announcements WHERE id=? AND guild_id=?').run(id,guildId);return r.changes>0}
+export function getAnnouncementRecipients(guildId,audience){
+  if(audience==='employees')return db.prepare("SELECT user_id AS id,display_name,username FROM employees WHERE guild_id=? AND status!='inactive' ORDER BY display_name,username").all(guildId);
+  if(audience==='clients')return db.prepare("SELECT id,company AS display_name,contact AS username,discord FROM partnerships WHERE guild_id=? AND discord IS NOT NULL AND discord!='' ORDER BY company").all(guildId);
+  const employees=db.prepare("SELECT user_id AS id,display_name,username FROM employees WHERE guild_id=? AND status!='inactive' ORDER BY display_name,username").all(guildId).map(x=>({...x,type:'employee'}));
+  const clients=db.prepare("SELECT id,company AS display_name,contact AS username,discord FROM partnerships WHERE guild_id=? AND discord IS NOT NULL AND discord!='' ORDER BY company").all(guildId).map(x=>({...x,id:String(x.id),type:'client'}));
+  return [...employees,...clients];
+}
+export function getMailContacts(guildId){
+  const employees=db.prepare("SELECT user_id AS id,display_name,username,role_key,status FROM employees WHERE guild_id=? AND status!='inactive' ORDER BY display_name,username").all(guildId).map(x=>({type:'employee',id:String(x.id),name:x.display_name||x.username,username:x.username,role:x.role_key}));
+  const clients=db.prepare("SELECT id,company AS name,contact,discord,status FROM partnerships WHERE guild_id=? AND discord IS NOT NULL AND discord!='' ORDER BY company").all(guildId).map(x=>({type:'client',id:String(x.id),name:x.name,username:x.contact||'',discord:x.discord,status:x.status}));
+  return {employees,clients};
+}
+export function createPrivateMail(d){const now=new Date().toISOString();const key=mailConversationKey(d.senderType,d.senderId,d.recipientType,d.recipientId);const r=db.prepare('INSERT INTO private_mail(guild_id,conversation_key,sender_type,sender_id,sender_name,recipient_type,recipient_id,recipient_name,subject,body,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(d.guildId,key,d.senderType,String(d.senderId),d.senderName,d.recipientType,String(d.recipientId),d.recipientName,d.subject,d.body,now);return db.prepare('SELECT * FROM private_mail WHERE id=?').get(r.lastInsertRowid)}
+export function getMailConversations(guildId,type,id){
+  const meType=String(type),meId=String(id);
+  const rows=db.prepare('SELECT m.*,(SELECT COUNT(*) FROM private_mail u WHERE u.guild_id=m.guild_id AND u.conversation_key=m.conversation_key AND u.recipient_type=? AND u.recipient_id=? AND u.read_at IS NULL) AS unread_count FROM private_mail m INNER JOIN (SELECT conversation_key,MAX(id) max_id FROM private_mail WHERE guild_id=? GROUP BY conversation_key) x ON x.max_id=m.id WHERE m.guild_id=? AND ((m.sender_type=? AND m.sender_id=?) OR (m.recipient_type=? AND m.recipient_id=?)) ORDER BY m.id DESC').all(meType,meId,guildId,guildId,meType,meId,meType,meId);
+  return rows.map(m=>({conversation_key:m.conversation_key,subject:m.subject,preview:m.body.slice(0,180),created_at:m.created_at,unread_count:Number(m.unread_count)||0,other:m.sender_type===meType&&m.sender_id===meId?{type:m.recipient_type,id:m.recipient_id,name:m.recipient_name}:{type:m.sender_type,id:m.sender_id,name:m.sender_name}}));
+}
+export function getMailMessages(guildId,type,id,conversationKey){const allowed=db.prepare('SELECT 1 FROM private_mail WHERE guild_id=? AND conversation_key=? AND ((sender_type=? AND sender_id=?) OR (recipient_type=? AND recipient_id=?)) LIMIT 1').get(guildId,conversationKey,type,String(id),type,String(id));if(!allowed)return null;return db.prepare('SELECT * FROM private_mail WHERE guild_id=? AND conversation_key=? ORDER BY id ASC').all(guildId,conversationKey)}
+export function markMailConversationRead(guildId,type,id,conversationKey){return db.prepare('UPDATE private_mail SET read_at=? WHERE guild_id=? AND conversation_key=? AND recipient_type=? AND recipient_id=? AND read_at IS NULL').run(new Date().toISOString(),guildId,conversationKey,type,String(id)).changes}
