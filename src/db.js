@@ -250,34 +250,73 @@ export function saveQuotaImport(d){
  ensureQuotaImportColumns();
  const importedAt=d.importedAt||new Date().toISOString();
  const sourceText=String(d.sourceText||'');
- const sourceHash=crypto.createHash('sha256').update([d.periodStart,d.periodEnd,sourceText.replace(/\\r\\n/g,'\\n').trim()].join('\\n')).digest('hex');
+ const sourceHash=crypto.createHash('sha256').update([d.periodStart,d.periodEnd,sourceText.replace(/\r\n/g,'\n').trim()].join('\n')).digest('hex');
  const duplicate=db.prepare('SELECT * FROM quota_imports WHERE guild_id=? AND source_hash=? ORDER BY id DESC LIMIT 1').get(d.guildId,sourceHash);
- if(duplicate)return {...duplicate,duplicate:true,imported:false,created:[],imported:[]};
+ if(duplicate)return {...duplicate,duplicate:true,imported:false,created:[],imported:[],skipped:[],cleaned:[]};
+ const normalizeEmployeeName=v=>String(v||'').trim().toLocaleLowerCase('fr-FR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[—–-]+/g,' ').replace(/\s+/g,' ').trim();
+ const consolidateDuplicates=(employees)=>{
+   if(employees.length<2)return employees[0]||null;
+   const ranked=[...employees].sort((a,b)=>{
+     const score=e=>(e.role_key?100:0)+(String(e.user_id||'').startsWith('import:')?0:20)+(e.status==='active'?10:0);
+     return score(b)-score(a)||Number(b.id)-Number(a.id);
+   });
+   const keep=ranked[0];
+   for(const duplicateEmployee of ranked.slice(1)){
+     const quotaRows=db.prepare('SELECT * FROM quota_entries WHERE employee_id=? ORDER BY id ASC').all(duplicateEmployee.id);
+     for(const q of quotaRows){
+       const existing=db.prepare('SELECT id,imported_at,updated_at,created_at FROM quota_entries WHERE employee_id=? AND period_start=? AND period_end=?').get(keep.id,q.period_start,q.period_end);
+       if(!existing){
+         db.prepare('UPDATE quota_entries SET employee_id=? WHERE id=?').run(keep.id,q.id);
+       }else{
+         const qTime=Date.parse(q.imported_at||q.updated_at||q.created_at||'')||0;
+         const eTime=Date.parse(existing.imported_at||existing.updated_at||existing.created_at||'')||0;
+         if(qTime>eTime){
+           db.prepare('DELETE FROM quota_entries WHERE id=?').run(existing.id);
+           db.prepare('UPDATE quota_entries SET employee_id=? WHERE id=?').run(keep.id,q.id);
+         }else{
+           db.prepare('DELETE FROM quota_entries WHERE id=?').run(q.id);
+         }
+       }
+     }
+     db.prepare('DELETE FROM employees WHERE id=? AND guild_id=?').run(duplicateEmployee.id,d.guildId);
+   }
+   return getEmployee(keep.id,d.guildId);
+ };
  const importUid=crypto.randomUUID();
  const tx=db.transaction(()=>{
    const batch=db.prepare('INSERT INTO quota_imports(guild_id,import_uid,source_hash,period_start,period_end,imported_by,imported_by_name,imported_at,source_text,status) VALUES(?,?,?,?,?,?,?,?,?,?)').run(d.guildId,importUid,sourceHash,d.periodStart,d.periodEnd,d.importedBy||null,d.importedByName||null,importedAt,sourceText,'processing');
    const batchId=Number(batch.lastInsertRowid);
-   const imported=[],created=[];
+   const imported=[],skipped=[],cleaned=[];
+   const employees=getEmployees(d.guildId);
+   const employeeGroups=new Map();
+   for(const e of employees){
+     const key=normalizeEmployeeName(e.display_name||e.username);
+     if(!key)continue;
+     if(!employeeGroups.has(key))employeeGroups.set(key,[]);
+     employeeGroups.get(key).push(e);
+   }
    for(const row of (d.rows||[])){
-     let employee=getEmployees(d.guildId).find(e=>{
-       const a=String(e.display_name||'').trim().toLocaleLowerCase('fr-FR');
-       const b=String(e.username||'').trim().toLocaleLowerCase('fr-FR');
-       const n=String(row.name||'').trim().toLocaleLowerCase('fr-FR');
-       return a===n||b===n;
-     });
+     const key=normalizeEmployeeName(row.name);
+     const candidates=employeeGroups.get(key)||[];
+     if(!candidates.length){
+       skipped.push({name:row.name,reason:'Aucun employé Discord correspondant. Aucune fiche créée.'});
+       continue;
+     }
+     const before=candidates.length;
+     const employee=consolidateDuplicates(candidates);
+     if(before>1)cleaned.push({name:row.name,removed:before-1,kept:employee?.display_name||employee?.username,role:employee?.role_name||employee?.role_key||null});
      if(!employee){
-       const slug=String(row.name||'employe').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||crypto.randomUUID();
-       employee=upsertEmployee({guildId:d.guildId,userId:'import:'+slug,username:String(row.name||'Employé').trim(),displayName:String(row.name||'Employé').trim(),status:'active',quotaEnabled:true,quotaTarget:0,notes:'Employé créé automatiquement lors d’un import RH.'});
-       created.push(employee.display_name||employee.username);
+       skipped.push({name:row.name,reason:'Employé introuvable.'});
+       continue;
      }
      upsertQuota({...row,guildId:d.guildId,employeeId:employee.id,periodStart:d.periodStart,periodEnd:d.periodEnd,importBatchId:batchId,importedAt,note:'Import RH des interventions'});
-     imported.push({name:row.name,employeeId:employee.id});
+     imported.push({name:row.name,employeeId:employee.id,role:employee.role_name||employee.role_key||null});
    }
-   db.prepare('UPDATE quota_imports SET imported_count=?,created_count=?,status=? WHERE id=?').run(imported.length,created.length,'completed',batchId);
-   return {batchId,importUid,imported,created};
+   db.prepare('UPDATE quota_imports SET imported_count=?,created_count=?,skipped_count=?,status=? WHERE id=?').run(imported.length,0,skipped.length,'completed',batchId);
+   return {batchId,importUid,imported,created:[],skipped,cleaned};
  });
  const result=tx();
- audit(d.guildId,d.importedBy||null,'quota.import.completed',JSON.stringify({batchId:result.batchId,importUid:result.importUid,periodStart:d.periodStart,periodEnd:d.periodEnd,count:result.imported.length,created:result.created.length,importedAt}));
+ audit(d.guildId,d.importedBy||null,'quota.import.completed',JSON.stringify({batchId:result.batchId,importUid:result.importUid,periodStart:d.periodStart,periodEnd:d.periodEnd,count:result.imported.length,created:0,skipped:result.skipped.length,cleaned:result.cleaned.length,importedAt}));
  return {...getQuotaImport(result.batchId,d.guildId),...result,duplicate:false,importedAt};
 }
 export function getQuotaEntry(id,guildId){return db.prepare('SELECT q.*,e.username,e.display_name,e.role_key,h.name AS role_name,e.quota_target,e.quota_enabled FROM quota_entries q JOIN employees e ON e.id=q.employee_id LEFT JOIN hierarchy_roles h ON h.guild_id=e.guild_id AND h.role_key=e.role_key WHERE q.id=? AND q.guild_id=?').get(id,guildId)}
