@@ -105,11 +105,11 @@ client.on('interactionCreate',async i=>{try{if(i.guild)upsertGuild(i.guild);if(i
 export async function startBot(){if(!process.env.DISCORD_TOKEN)throw new Error('DISCORD_TOKEN manquant');if(!process.env.DISCORD_CLIENT_ID)throw new Error('DISCORD_CLIENT_ID manquant');const rest=new REST({version:'10'}).setToken(process.env.DISCORD_TOKEN);await rest.put(Routes.applicationCommands(process.env.DISCORD_CLIENT_ID),{body:commands});await client.login(process.env.DISCORD_TOKEN)}
 
 
-export async function sendDiscordPrivateMail({recipientType,recipientId,subject,body,senderName='LS CUSTOM'}){
+export async function sendDiscordPrivateMail({guildId,recipientType,recipientId,subject,body,senderName='LS CUSTOM'}){
   await waitForReady();
   let discordId=String(recipientId||'');
   if(recipientType==='client'){
-    const p=getPartnership(Number(recipientId),process.env.DEFAULT_GUILD_ID||undefined);
+    const p=getPartnership(Number(recipientId),guildId);
     discordId=String(p?.discord||'');
   }
   if(!/^\d{17,20}$/.test(discordId))throw new Error('Destinataire Discord introuvable.');
