@@ -93,7 +93,8 @@ async function main(){
    (access.isAdmin||access.permissions.includes('partnerships')||access.permissions.includes('all'))?api('/api/employee/partnerships'):Promise.resolve([]),
    api('/api/employee/agenda')
   ]);
-  const normalizeRows=v=>{if(Array.isArray(v))return v;if(Array.isArray(v?.rows))return v.rows;if(Array.isArray(v?.absences))return v.absences;if(Array.isArray(v?.data))return v.data;if(Array.isArray(v?.data?.rows))return v.data.rows;if(Array.isArray(v?.data?.absences))return v.data.absences;return []};\n  render({overview:results[0]||{},rows:normalizeRows(results[1]),team:normalizeRows(results[2]),partnerships:normalizeRows(results[3]),absences:normalizeRows(results[4])});
+  const normalizeRows=v=>{if(Array.isArray(v))return v;if(Array.isArray(v?.rows))return v.rows;if(Array.isArray(v?.absences))return v.absences;if(Array.isArray(v?.data))return v.data;if(Array.isArray(v?.data?.rows))return v.data.rows;if(Array.isArray(v?.data?.absences))return v.data.absences;return []};
+  render({overview:results[0]||{},rows:normalizeRows(results[1]),team:normalizeRows(results[2]),partnerships:normalizeRows(results[3]),absences:normalizeRows(results[4])});
   const refreshEl=$('#refreshLabel'); if(refreshEl) refreshEl.textContent='Mis à jour à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
  }catch(e){const content=$('#content');if(content)content.innerHTML='<div class="dash-error">'+esc(e.message)+'</div>'}
 }
