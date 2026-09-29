@@ -246,18 +246,18 @@ app.post('/api/employee/quotas/import',playerAuth,async(req,res)=>{try{
  const allowedRole=a.isAdmin||a.permissions.includes('activity_all')||a.permissions.includes('all');
  if(!allowedRole)return res.status(403).json({error:'Seuls les RH, DRH, patrons et rôles autorisés peuvent importer les interventions.'});
  const start=clean(req.body.period_start,10),end=clean(req.body.period_end,10),raw=String(req.body.text||'');
- if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(start)||!/^\\d{4}-\\d{2}-\\d{2}$/.test(end)||start>end)return res.status(400).json({error:'Période invalide.'});
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end)||start>end)return res.status(400).json({error:'Période invalide.'});
  if(raw.trim().length<20)return res.status(400).json({error:'Colle le relevé complet des interventions.'});
 
  const value=(line,label)=>{
-   const m=line.match(new RegExp(label+'\\\\s*:\\\\s*\\$?\\\\s*([\\\\d\\\\u00a0\\\\u202f\\\\s]+)','i'));
+   const m=line.match(new RegExp(label+'\\s*:\\s*\$?\\s*([\\d\\u00a0\\u202f\\s]+)','i'));
    return m?Number(m[1].replace(/[^0-9]/g,''))||0:0;
  };
- const rows=raw.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean),parsed=[],errors=[];
+ const rows=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),parsed=[],errors=[];
  for(let i=0;i<rows.length;i++){
-   const line=rows[i],head=line.match(/^\\d+\\.\\s*(.*?)\\s+—\\s*Appels\\s*:/i);
-   if(!head){if(/Appels\\s*:/i.test(line))errors.push({line:i+1,error:'Format de nom/intervention non reconnu.'});continue}
-   const name=head[1].replace(/\\s+/g,' ').trim();
+   const line=rows[i],head=line.match(/^\d+\.\s*(.*?)\s+—\s*Appels\s*:/i);
+   if(!head){if(/Appels\s*:/i.test(line))errors.push({line:i+1,error:'Format de nom/intervention non reconnu.'});continue}
+   const name=head[1].replace(/\s+/g,' ').trim();
    if(!name){errors.push({line:i+1,error:'Nom employé manquant.'});continue}
    parsed.push({name,appels:value(line,'Appels'),reparations:value(line,'Réparations'),fourrieres:value(line,'Mises en fourrière'),personnalisations:value(line,'Personnalisations'),factures:value(line,'Factures encaissées'),montantFourrieres:value(line,'Montant fourrière'),montantPersonnalisations:value(line,'Montant personnalisations'),montantFactures:value(line,'Montant factures')});
  }
