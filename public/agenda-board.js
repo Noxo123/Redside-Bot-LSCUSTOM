@@ -18,12 +18,21 @@ function render(){
  }).join(''):'<div class="agenda-empty"><div class="empty-icon">✓</div><strong>Aucune absence</strong><span>Aucune absence ne correspond aux filtres sélectionnés.</span></div>';
  document.querySelectorAll('.absence-delete').forEach(btn=>btn.onclick=()=>remove(btn.dataset.id));
 }
+function setLoading(active=true,message='Chargement de l’agenda RH…'){
+ const calendar=$('#calendar'),stats=$('#stats');
+ if(!calendar||!stats)return;
+ if(active){
+  stats.innerHTML='<div class="agenda-skeleton agenda-skeleton-stat"></div><div class="agenda-skeleton agenda-skeleton-stat"></div><div class="agenda-skeleton agenda-skeleton-stat"></div>';
+  calendar.innerHTML='<div class="agenda-loading-state"><div class="agenda-spinner"></div><strong>'+esc(message)+'</strong><span>Récupération des absences et des droits.</span></div>';
+ }
+}
 async function load(){
+ setLoading(true);
  try{
   const r=await api('/api/employee/agenda');state.rows=Array.isArray(r)?r:(r.rows||[]);state.canManage=Boolean(r.canManage);window.__meId=window.__meId||'';
   const me=await api('/api/employee/me').catch(()=>({user:{}}));window.__meId=me.user?.id||'';
-  render();$('#period').textContent='Mis à jour à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
- }catch(e){$('#calendar').innerHTML='<div class="dash-error">'+esc(e.message)+'</div>'}
+  render();const period=$('#period');if(period)period.textContent='Mis à jour à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+ }catch(e){const calendar=$('#calendar');if(calendar)calendar.innerHTML='<div class="agenda-empty"><div class="empty-icon">!</div><strong>Impossible de charger l’agenda</strong><span>'+esc(e.message)+'</span><button class="agenda-btn" type="button" onclick="load()">Réessayer</button></div>'}
 }
 async function remove(id){
  const mine=state.rows.find(a=>String(a.id)===String(id));if(!mine)return;
@@ -31,9 +40,9 @@ async function remove(id){
  try{await api('/api/employee/absences/'+encodeURIComponent(id),{method:'DELETE'});await load()}catch(e){alert(e.message)}
 }
 $('#absenceForm').onsubmit=async e=>{
- e.preventDefault();$('#formError').textContent='';
+ e.preventDefault();const formError=$('#formError'),submit=e.target.querySelector('.agenda-submit');if(formError)formError.textContent='';if(submit){submit.classList.add('is-loading');submit.textContent='Enregistrement…';}
  const fd=Object.fromEntries(new FormData(e.target));
- try{await api('/api/employee/absences',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fd)});e.target.reset();await load();document.querySelector('.agenda-side').classList.add('saved');setTimeout(()=>document.querySelector('.agenda-side').classList.remove('saved'),900)}catch(x){$('#formError').textContent=x.message}
+ try{await api('/api/employee/absences',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fd)});e.target.reset();await load();document.querySelector('.agenda-side').classList.add('saved');setTimeout(()=>document.querySelector('.agenda-side').classList.remove('saved'),900)}catch(x){if(formError)formError.textContent=x.message}finally{if(submit){submit.classList.remove('is-loading');submit.textContent='Enregistrer mon absence'}}
 };
 $('#newAbsence').onclick=()=>document.querySelector('.agenda-side').scrollIntoView({behavior:'smooth',block:'center'});
 $('#filter').onchange=e=>{state.filter=e.target.value;render()};
