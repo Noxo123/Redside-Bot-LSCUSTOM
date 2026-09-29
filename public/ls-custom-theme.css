@@ -267,3 +267,12 @@ button:disabled{cursor:not-allowed!important;opacity:.55!important;transform:non
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
 
 .ls-context{display:flex;align-items:center;gap:12px;min-width:0}.ls-context-page{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ls-context-clock{font:600 10px 'JetBrains Mono',monospace;color:var(--gold);padding-left:12px;border-left:1px solid var(--border)}@media(max-width:600px){.ls-context-page{display:none}.ls-context-clock{border-left:0;padding-left:0}}
+
+/* ===== Shared pages: sidebar left / content right ===== */
+@media(min-width:901px){
+  body>.ls-shell{display:grid!important;grid-template-columns:270px minmax(0,1fr)!important;grid-template-rows:1fr!important;align-items:stretch!important;width:100%!important;min-height:100vh!important}
+  body>.ls-shell>.ls-app-sidebar{grid-column:1!important;grid-row:1!important;width:270px!important;min-width:270px!important;height:100vh!important;position:sticky!important;top:0!important;align-self:start!important}
+  body>.ls-shell>main{grid-column:2!important;grid-row:1!important;min-width:0!important;width:auto!important;margin:0!important;padding:0 40px 70px!important;display:block!important}
+  body>.ls-shell>main>.wrap{width:100%!important;max-width:1400px!important;margin:0 auto!important;padding:22px 0!important}
+}
+@media(max-width:900px){body>.ls-shell{display:block!important}body>.ls-shell>.ls-app-sidebar{width:100%!important;min-width:0!important}body>.ls-shell>main{width:100%!important;min-width:0!important}}
