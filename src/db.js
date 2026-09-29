@@ -79,6 +79,26 @@ CREATE TABLE IF NOT EXISTS quota_entries (
  FOREIGN KEY(employee_id) REFERENCES employees(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_quota_period ON quota_entries(guild_id,period_start,period_end);
+CREATE TABLE IF NOT EXISTS quota_imports (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ guild_id TEXT NOT NULL,
+ import_uid TEXT NOT NULL UNIQUE,
+ source_hash TEXT NOT NULL,
+ period_start TEXT NOT NULL,
+ period_end TEXT NOT NULL,
+ imported_by TEXT,
+ imported_by_name TEXT,
+ imported_at TEXT NOT NULL,
+ source_text TEXT NOT NULL DEFAULT '',
+ imported_count INTEGER NOT NULL DEFAULT 0,
+ created_count INTEGER NOT NULL DEFAULT 0,
+ skipped_count INTEGER NOT NULL DEFAULT 0,
+ error_count INTEGER NOT NULL DEFAULT 0,
+ status TEXT NOT NULL DEFAULT 'completed'
+);
+CREATE INDEX IF NOT EXISTS idx_quota_imports_guild_date ON quota_imports(guild_id,imported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_quota_imports_hash ON quota_imports(guild_id,source_hash);
+
 
 CREATE TABLE IF NOT EXISTS partnerships (
  id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -111,6 +131,9 @@ export function getPermissionsForDiscordRoles(guildId,discordRoleIds=[]){const r
 
 
 for(const sql of [
+ 'ALTER TABLE quota_entries ADD COLUMN import_batch_id INTEGER',
+ 'ALTER TABLE quota_entries ADD COLUMN imported_at TEXT',
+
  'ALTER TABLE employees ADD COLUMN discord_username TEXT',
  'ALTER TABLE employees ADD COLUMN discord_display_name TEXT',
  'ALTER TABLE recruitments ADD COLUMN image_path TEXT',
@@ -178,7 +201,63 @@ export function linkEmployeeDiscord({id,guildId,userId,username,displayName}){co
 export function unlinkEmployeeDiscord({id,guildId}){const now=new Date().toISOString();db.prepare('UPDATE employees SET user_id=?,discord_username=NULL,discord_display_name=NULL,updated_at=? WHERE id=? AND guild_id=?').run('import:'+crypto.randomUUID(),now,id,guildId);return getEmployee(id,guildId)}
 export function deleteEmployee(id,guildId){const r=db.prepare('DELETE FROM employees WHERE id=? AND guild_id=?').run(id,guildId);return r.changes>0}
 export function getQuotaEntries(guildId,startDate,endDate){const rows=db.prepare('SELECT q.*,e.user_id,e.username,e.display_name,e.role_key,h.name AS role_name,h.level AS role_level,e.quota_target,e.quota_enabled FROM quota_entries q JOIN employees e ON e.id=q.employee_id LEFT JOIN hierarchy_roles h ON h.guild_id=e.guild_id AND h.role_key=e.role_key WHERE q.guild_id=? AND q.period_start=? AND q.period_end=? ORDER BY COALESCE(h.level,-1) DESC,e.display_name,e.username').all(guildId,startDate,endDate);return rows}
-export function upsertQuota(d){const now=new Date().toISOString();const values=[Number(d.appels)||0,Number(d.reparations)||0,Number(d.fourrieres)||0,Number(d.personnalisations)||0,Number(d.factures)||0,Number(d.montantFourrieres)||0,Number(d.montantPersonnalisations)||0,Number(d.montantFactures)||0,d.note||''];const existing=db.prepare('SELECT id FROM quota_entries WHERE employee_id=? AND period_start=? AND period_end=?').get(d.employeeId,d.periodStart,d.periodEnd);if(existing){db.prepare('UPDATE quota_entries SET appels=?,reparations=?,fourrieres=?,personnalisations=?,factures=?,montant_fourrieres=?,montant_personnalisations=?,montant_factures=?,note=?,updated_at=? WHERE id=?').run(...values,now,existing.id);return getQuotaEntry(existing.id,d.guildId)}const r=db.prepare('INSERT INTO quota_entries(guild_id,employee_id,period_start,period_end,appels,reparations,fourrieres,personnalisations,factures,montant_fourrieres,montant_personnalisations,montant_factures,note,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(d.guildId,d.employeeId,d.periodStart,d.periodEnd,...values,now,now);return getQuotaEntry(r.lastInsertRowid,d.guildId)}
+export function upsertQuota(d){
+ ensureQuotaImportColumns();
+ const now=d.importedAt||new Date().toISOString();
+ const values=[Number(d.appels)||0,Number(d.reparations)||0,Number(d.fourrieres)||0,Number(d.personnalisations)||0,Number(d.factures)||0,Number(d.montantFourrieres)||0,Number(d.montantPersonnalisations)||0,Number(d.montantFactures)||0,d.note||'',d.importBatchId||null,now];
+ const existing=db.prepare('SELECT id FROM quota_entries WHERE employee_id=? AND period_start=? AND period_end=?').get(d.employeeId,d.periodStart,d.periodEnd);
+ if(existing){
+   db.prepare('UPDATE quota_entries SET appels=?,reparations=?,fourrieres=?,personnalisations=?,factures=?,montant_fourrieres=?,montant_personnalisations=?,montant_factures=?,note=?,import_batch_id=?,imported_at=?,updated_at=? WHERE id=?').run(...values,now,existing.id);
+   return getQuotaEntry(existing.id,d.guildId);
+ }
+ const r=db.prepare('INSERT INTO quota_entries(guild_id,employee_id,period_start,period_end,appels,reparations,fourrieres,personnalisations,factures,montant_fourrieres,montant_personnalisations,montant_factures,note,import_batch_id,imported_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(d.guildId,d.employeeId,d.periodStart,d.periodEnd,...values,now,now);
+ return getQuotaEntry(r.lastInsertRowid,d.guildId);
+}
+function ensureQuotaImportColumns(){
+ const cols=db.prepare('PRAGMA table_info(quota_entries)').all().map(x=>x.name);
+ if(!cols.includes('import_batch_id')) db.exec('ALTER TABLE quota_entries ADD COLUMN import_batch_id INTEGER');
+ if(!cols.includes('imported_at')) db.exec('ALTER TABLE quota_entries ADD COLUMN imported_at TEXT');
+}
+ensureQuotaImportColumns();
+
+export function getQuotaImports(guildId,limit=50){
+ return db.prepare('SELECT id,import_uid,period_start,period_end,imported_by,imported_by_name,imported_at,imported_count,created_count,skipped_count,error_count,status FROM quota_imports WHERE guild_id=? ORDER BY imported_at DESC,id DESC LIMIT ?').all(guildId,Math.min(Math.max(Number(limit)||50,1),200));
+}
+export function getQuotaImport(id,guildId){return db.prepare('SELECT * FROM quota_imports WHERE id=? AND guild_id=?').get(id,guildId)}
+export function saveQuotaImport(d){
+ ensureQuotaImportColumns();
+ const importedAt=d.importedAt||new Date().toISOString();
+ const sourceText=String(d.sourceText||'');
+ const sourceHash=crypto.createHash('sha256').update([d.periodStart,d.periodEnd,sourceText.replace(/\\r\\n/g,'\\n').trim()].join('\\n')).digest('hex');
+ const duplicate=db.prepare('SELECT * FROM quota_imports WHERE guild_id=? AND source_hash=? ORDER BY id DESC LIMIT 1').get(d.guildId,sourceHash);
+ if(duplicate)return {...duplicate,duplicate:true,imported:false,created:[],imported:[]};
+ const importUid=crypto.randomUUID();
+ const tx=db.transaction(()=>{
+   const batch=db.prepare('INSERT INTO quota_imports(guild_id,import_uid,source_hash,period_start,period_end,imported_by,imported_by_name,imported_at,source_text,status) VALUES(?,?,?,?,?,?,?,?,?,?)').run(d.guildId,importUid,sourceHash,d.periodStart,d.periodEnd,d.importedBy||null,d.importedByName||null,importedAt,sourceText,'processing');
+   const batchId=Number(batch.lastInsertRowid);
+   const imported=[],created=[];
+   for(const row of (d.rows||[])){
+     let employee=getEmployees(d.guildId).find(e=>{
+       const a=String(e.display_name||'').trim().toLocaleLowerCase('fr-FR');
+       const b=String(e.username||'').trim().toLocaleLowerCase('fr-FR');
+       const n=String(row.name||'').trim().toLocaleLowerCase('fr-FR');
+       return a===n||b===n;
+     });
+     if(!employee){
+       const slug=String(row.name||'employe').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||crypto.randomUUID();
+       employee=upsertEmployee({guildId:d.guildId,userId:'import:'+slug,username:String(row.name||'Employé').trim(),displayName:String(row.name||'Employé').trim(),status:'active',quotaEnabled:true,quotaTarget:0,notes:'Employé créé automatiquement lors d’un import RH.'});
+       created.push(employee.display_name||employee.username);
+     }
+     upsertQuota({...row,guildId:d.guildId,employeeId:employee.id,periodStart:d.periodStart,periodEnd:d.periodEnd,importBatchId:batchId,importedAt,note:'Import RH des interventions'});
+     imported.push({name:row.name,employeeId:employee.id});
+   }
+   db.prepare('UPDATE quota_imports SET imported_count=?,created_count=?,status=? WHERE id=?').run(imported.length,created.length,'completed',batchId);
+   return {batchId,importUid,imported,created};
+ });
+ const result=tx();
+ audit(d.guildId,d.importedBy||null,'quota.import.completed',JSON.stringify({batchId:result.batchId,importUid:result.importUid,periodStart:d.periodStart,periodEnd:d.periodEnd,count:result.imported.length,created:result.created.length,importedAt}));
+ return {...getQuotaImport(result.batchId,d.guildId),...result,duplicate:false,importedAt};
+}
 export function getQuotaEntry(id,guildId){return db.prepare('SELECT q.*,e.username,e.display_name,e.role_key,h.name AS role_name,e.quota_target,e.quota_enabled FROM quota_entries q JOIN employees e ON e.id=q.employee_id LEFT JOIN hierarchy_roles h ON h.guild_id=e.guild_id AND h.role_key=e.role_key WHERE q.id=? AND q.guild_id=?').get(id,guildId)}
 
 function ensurePartnershipTermsColumns(){
