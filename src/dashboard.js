@@ -258,13 +258,13 @@ app.post('/api/employee/quotas/import',playerAuth,async(req,res)=>{try{
    }
    return 0;
  };
- const rows=raw.replace(/\r/g,'').split(/\\n/).map(x=>x.trim()).filter(Boolean);
+ const rows=raw.replace(/\r/g,'').split(/\n/).map(x=>x.trim()).filter(Boolean);
  const parsed=[],errors=[];
  let current=null;
  const flush=()=>{if(current){if(current.name)parsed.push(current);current=null;}};
  for(let i=0;i<rows.length;i++){
    const line=rows[i];
-   const hasMetric=/(?:Appels|Réparations|Mises? en fourrière|Personnalisations|Factures(?: encaissées)?|Montant (?:fourrière|personnalisations|factures))\\s*(?::|=|-)?/i.test(line);
+   const hasMetric=/(?:Appels|Réparations|Mises? en fourrière|Personnalisations|Factures(?: encaissées)?|Montant (?:fourrière|personnalisations|factures))\s*(?::|=|-)?/i.test(line);
    if(!hasMetric)continue;
    const appels=findField(line,['Appels']);
    const reparations=findField(line,['Réparations']);
@@ -274,7 +274,7 @@ app.post('/api/employee/quotas/import',playerAuth,async(req,res)=>{try{
    const montantFourrieres=findField(line,['Montant fourrière','Montant fourrieres','Montant des fourrières','Montant des fourrieres']);
    const montantPersonnalisations=findField(line,['Montant personnalisations','Montant des personnalisations']);
    const montantFactures=findField(line,['Montant factures','Montant des factures']);
-   const marker=line.search(/(?:Appels|Réparations|Mises? en fourrière|Personnalisations|Factures(?: encaissées)?|Montant (?:fourrière|personnalisations|factures))\\s*(?::|=|-)?/i);
+   const marker=line.search(/(?:Appels|Réparations|Mises? en fourrière|Personnalisations|Factures(?: encaissées)?|Montant (?:fourrière|personnalisations|factures))\s*(?::|=|-)?/i);
    let name='';
    if(marker>0)name=normalizeName(line.slice(0,marker).replace(/[|·•;]+$/,''));
    if(name){
@@ -289,7 +289,7 @@ app.post('/api/employee/quotas/import',playerAuth,async(req,res)=>{try{
  flush();
  const merged=new Map();
  for(const row of parsed){
-   const key=row.name.toLocaleLowerCase('fr-FR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\\s+/g,' ').trim();
+   const key=row.name.toLocaleLowerCase('fr-FR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
    if(!merged.has(key))merged.set(key,row);
    else{
      const x=merged.get(key);for(const k of ['appels','reparations','fourrieres','personnalisations','factures','montantFourrieres','montantPersonnalisations','montantFactures'])x[k]+=row[k];
