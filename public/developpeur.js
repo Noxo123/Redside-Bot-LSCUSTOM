@@ -8,8 +8,162 @@ function config(){const c=D.config,ch=D.channels.filter(x=>x.type!==4),cats=D.ch
 function people(){return '<div class="mb-4 flex items-center justify-between"><div><h2 class="text-lg font-semibold text-white">Personnes enregistrées</h2><p class="text-xs text-zinc-500">'+D.employees.length+' compte(s) synchronisé(s).</p></div><div class="flex gap-2"><button onclick="syncDiscordPeople()" class="rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2 text-sm font-bold text-zinc-100">↻ Synchroniser Discord</button><button onclick="person()" class="rounded-xl bg-white px-4 py-2 text-sm font-bold text-black">＋ Ajouter</button></div></div><div class="overflow-hidden rounded-2xl border border-zinc-800"><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-zinc-900 text-xs uppercase text-zinc-500"><tr><th class="px-4 py-3">Personne</th><th>ID Discord</th><th>Rôle</th><th>Statut</th><th></th></tr></thead><tbody class="divide-y divide-zinc-800">'+(D.employees.map(e=>'<tr class="hover:bg-zinc-900/40"><td class="px-4 py-4"><b class="text-white">'+esc(e.display_name||e.username)+'</b><div class="text-xs text-zinc-600">@'+esc(e.username)+'</div></td><td class="font-mono text-xs text-zinc-400">'+e.user_id+'</td><td>'+esc(e.role_name||'—')+'</td><td><span class="rounded-full border border-zinc-700 px-2 py-1 text-xs">'+esc(e.status)+'</span></td><td><button onclick="editPerson('+e.id+')" class="text-zinc-300 hover:text-white">Modifier</button> <button onclick="delPerson('+e.id+')" class="ml-3 text-red-400">Supprimer</button></td></tr>').join('')||'<tr><td colspan="5" class="p-8 text-center text-zinc-600">Aucun compte.</td></tr>')+'</tbody></table></div></div>'}
 function hierarchy(){return '<div class="mb-4 flex items-center justify-between"><div><h2 class="text-lg font-semibold text-white">Rôles & permissions</h2><p class="text-xs text-zinc-500">Lie les rôles Discord aux permissions du site.</p></div><button onclick="newRole()" class="rounded-xl bg-white px-4 py-2 text-sm font-bold text-black">＋ Nouveau rôle</button></div><div class="grid gap-4 xl:grid-cols-2">'+(D.hierarchy.map(h=>{let p=[];try{p=JSON.parse(h.permissions_json||'[]')}catch{}return '<article class="rounded-2xl border border-zinc-800 bg-zinc-950 p-5"><div class="flex justify-between"><div><b class="text-white">'+esc(h.name)+'</b><div class="text-xs text-zinc-600">'+esc(h.role_key)+' · niveau '+h.level+'</div></div><button onclick="delRole('+h.id+')" class="text-xs text-red-400">Supprimer</button></div><div class="mt-3 text-xs text-zinc-500">Discord : <span class="font-mono text-zinc-300">'+esc(h.discord_role_id||'non lié')+'</span></div><div class="mt-3 flex flex-wrap gap-2">'+p.map(x=>'<span class="rounded-full border border-zinc-700 px-2 py-1 text-[11px]">'+esc(x)+'</span>').join('')+'</div><button onclick="editRole('+h.id+')" class="mt-4 rounded-lg border border-zinc-700 px-3 py-2 text-xs">Modifier</button></article>'}).join('')||'<div class="text-sm text-zinc-600">Aucun rôle.</div>')+'</div>'}
 function recruitments(){const list=D.recruitments||[];return '<div class="mb-5 flex items-center justify-between"><div><h2 class="text-lg font-semibold text-white">Candidatures</h2><p class="text-xs text-zinc-500">Crée un formulaire complet en quelques secondes.</p></div><button onclick="newRecruitment()" class="rounded-xl bg-white px-4 py-2 text-sm font-bold text-black">＋ Nouveau formulaire</button></div><div class="grid gap-4 xl:grid-cols-2">'+(list.length?list.map(r=>'<article class="rounded-2xl border border-zinc-800 bg-zinc-950 p-5"><div class="flex items-start justify-between gap-4"><div><div class="text-xs text-zinc-600">#'+r.id+'</div><h3 class="mt-1 font-semibold text-white">'+esc(r.title)+'</h3><p class="mt-2 text-sm text-zinc-500">'+esc(r.description).slice(0,180)+'</p></div><span class="rounded-full border border-zinc-700 px-2 py-1 text-[11px] '+(r.status==='open'?'text-emerald-400':'text-zinc-500')+'">'+esc(r.status)+'</span></div><div class="mt-4 flex gap-2"><a target="_blank" href="/recrutement/'+r.id+'" class="rounded-lg border border-zinc-700 px-3 py-2 text-xs text-zinc-300">Voir le formulaire</a><button onclick="editRecruitment('+r.id+')" class="rounded-lg border border-zinc-700 px-3 py-2 text-xs">Modifier</button></div></article>').join(''):'<div class="text-sm text-zinc-600">Aucun formulaire.</div>')+'</div>'}
-function recruitmentForm(e){e=e||{};let qs=[];try{qs=JSON.parse(e.questions_json||'[]')}catch{};const row=q=>'<div class="qrow rounded-xl border border-zinc-800 bg-zinc-950 p-3"><div class="grid gap-3 md:grid-cols-[1fr_160px_auto]"><input name="label" required value="'+esc(q.label||'')+'" placeholder="Question" class="rounded-lg border border-zinc-800 bg-black p-2.5 text-sm"><select name="type" class="rounded-lg border border-zinc-800 bg-black p-2.5 text-sm"><option '+(q.type==='text'?'selected':'')+' value="text">Réponse courte</option><option '+(q.type==='textarea'?'selected':'')+' value="textarea">Texte long</option><option '+(q.type==='number'?'selected':'')+' value="number">Nombre</option><option '+(q.type==='select'?'selected':'')+' value="select">Choix</option></select><button type="button" onclick="this.closest(\'.qrow\').remove()" class="text-red-400">Supprimer</button></div><input name="options" value="'+esc((q.options||[]).join(' | '))+'" placeholder="Choix séparés par | (si choix)" class="mt-2 hidden w-full rounded-lg border border-zinc-800 bg-black p-2.5 text-sm options"><label class="mt-2 flex items-center gap-2 text-xs text-zinc-500"><input name="required" type="checkbox" '+(q.required!==false?'checked':'')+'> Obligatoire</label></div>';return '<form id="rfm" class="grid gap-4"><input type="hidden" name="recruitment_id" value="'+(e.id||'')+'"><label class="text-xs text-zinc-500">Titre<input name="title" required value="'+esc(e.title||'')+'" class="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 p-3"></label><label class="text-xs text-zinc-500">Description<textarea name="description" required class="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 p-3">'+esc(e.description||'')+'</textarea></label><label class="text-xs text-zinc-500">Image (URL)<input name="image_url" value="'+esc(e.image_url||'')+'" class="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 p-3"></label><div><div class="mb-2 flex items-center justify-between"><span class="text-xs font-semibold text-zinc-500">Questions personnalisées</span><button type="button" id="addq" class="rounded-lg border border-zinc-700 px-3 py-2 text-xs">＋ Ajouter</button></div><div id="questions" class="grid gap-2">'+qs.map(row).join('')+'</div></div><div class="rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4 text-xs text-emerald-300">✓ Disponibilités hebdomadaires et protection anti-bot ajoutées automatiquement au formulaire.</div><label class="flex items-center gap-2 text-sm"><input type="checkbox" name="publish"> Publier immédiatement dans le salon recrutements</label><button class="rounded-xl bg-white py-3 font-bold text-black">Enregistrer le formulaire</button></form>'}
-function newRecruitment(){const m=modal('Nouveau formulaire de candidature',recruitmentForm());bindRecruitmentForm(m);m.querySelector('#rfm').onsubmit=x=>saveRecruitment(x,m)}
+function recruitmentForm(e) {
+  e = e || {};
+
+  let qs = [];
+
+  try {
+    qs = JSON.parse(e.questions_json || "[]");
+  } catch {
+    qs = [];
+  }
+
+  const row = (q = {}) => `
+    <div class="qrow rounded-xl border border-zinc-800 bg-zinc-950 p-3">
+      <div class="grid gap-3 md:grid-cols-[1fr_160px_auto]">
+
+        <input
+          name="label"
+          required
+          value="${esc(q.label || "")}"
+          placeholder="Question"
+          class="rounded-lg border border-zinc-800 bg-black p-2.5 text-sm"
+        >
+
+        <select
+          name="type"
+          class="rounded-lg border border-zinc-800 bg-black p-2.5 text-sm"
+        >
+          <option value="text" ${q.type === "text" ? "selected" : ""}>
+            Réponse courte
+          </option>
+
+          <option value="textarea" ${q.type === "textarea" ? "selected" : ""}>
+            Texte long
+          </option>
+
+          <option value="number" ${q.type === "number" ? "selected" : ""}>
+            Nombre
+          </option>
+
+          <option value="select" ${q.type === "select" ? "selected" : ""}>
+            Choix
+          </option>
+        </select>
+
+        <button
+          type="button"
+          onclick="this.closest('.qrow').remove()"
+          class="text-red-400"
+        >
+          Supprimer
+        </button>
+
+      </div>
+
+      <input
+        name="options"
+        value="${esc((q.options || []).join(" | "))}"
+        placeholder="Choix séparés par | (si choix)"
+        class="options mt-2 hidden w-full rounded-lg border border-zinc-800 bg-black p-2.5 text-sm"
+      >
+
+      <label class="mt-2 flex items-center gap-2 text-xs text-zinc-500">
+        <input
+          name="required"
+          type="checkbox"
+          ${q.required !== false ? "checked" : ""}
+        >
+        Obligatoire
+      </label>
+    </div>
+  `;
+
+  return `
+    <form id="rfm" class="grid gap-4">
+
+      <input
+        type="hidden"
+        name="recruitment_id"
+        value="${e.id || ""}"
+      >
+
+      <label class="text-xs text-zinc-500">
+        Titre
+
+        <input
+          name="title"
+          required
+          value="${esc(e.title || "")}"
+          class="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 p-3"
+        >
+      </label>
+
+      <label class="text-xs text-zinc-500">
+        Description
+
+        <textarea
+          name="description"
+          required
+          class="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 p-3"
+        >${esc(e.description || "")}</textarea>
+      </label>
+
+      <label class="text-xs text-zinc-500">
+        Image (URL)
+
+        <input
+          name="image_url"
+          value="${esc(e.image_url || "")}"
+          class="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 p-3"
+        >
+      </label>
+
+      <div>
+        <div class="mb-2 flex items-center justify-between">
+          <span class="text-xs font-semibold text-zinc-500">
+            Questions personnalisées
+          </span>
+
+          <button
+            type="button"
+            id="addq"
+            class="rounded-lg border border-zinc-700 px-3 py-2 text-xs"
+          >
+            ＋ Ajouter
+          </button>
+        </div>
+
+        <div id="questions" class="grid gap-2">
+          ${qs.map(row).join("")}
+        </div>
+      </div>
+
+      <div
+        class="rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4 text-xs text-emerald-300"
+      >
+        ✓ Disponibilités hebdomadaires et protection anti-bot
+        ajoutées automatiquement au formulaire.
+      </div>
+
+      <label class="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="publish"
+        >
+        Publier immédiatement dans le salon recrutements
+      </label>
+
+      <button
+        class="rounded-xl bg-white py-3 font-bold text-black"
+      >
+        Enregistrer le formulaire
+      </button>
+
+    </form>
+  `;
+}function newRecruitment(){const m=modal('Nouveau formulaire de candidature',recruitmentForm());bindRecruitmentForm(m);m.querySelector('#rfm').onsubmit=x=>saveRecruitment(x,m)}
 function editRecruitment(id){const e=(D.recruitments||[]).find(x=>x.id===id),m=modal('Modifier le formulaire',recruitmentForm(e));bindRecruitmentForm(m);m.querySelector('#rfm').onsubmit=x=>saveRecruitment(x,m)}
 function bindRecruitmentForm(m){const add=()=>{const q=m.querySelector('#questions');const t=document.createElement('div');t.innerHTML='<div class="qrow rounded-xl border border-zinc-800 bg-zinc-950 p-3"><div class="grid gap-3 md:grid-cols-[1fr_160px_auto]"><input name="label" required placeholder="Question" class="rounded-lg border border-zinc-800 bg-black p-2.5 text-sm"><select name="type" class="rounded-lg border border-zinc-800 bg-black p-2.5 text-sm"><option value="text">Réponse courte</option><option value="textarea">Texte long</option><option value="number">Nombre</option><option value="select">Choix</option></select><button type="button" onclick="this.closest(\'.qrow\').remove()" class="text-red-400">Supprimer</button></div><input name="options" placeholder="Choix séparés par |" class="mt-2 hidden w-full rounded-lg border border-zinc-800 bg-black p-2.5 text-sm options"><label class="mt-2 flex items-center gap-2 text-xs text-zinc-500"><input name="required" type="checkbox" checked> Obligatoire</label></div>';q.appendChild(t.firstElementChild);};m.querySelector('#addq').onclick=add;m.querySelectorAll('.qrow select').forEach(x=>x.onchange=()=>{x.closest('.qrow').querySelector('.options').classList.toggle('hidden',x.value!=='select')});m.querySelectorAll('.qrow select').forEach(x=>x.dispatchEvent(new Event('change')))}
 async function saveRecruitment(e,m){e.preventDefault();const f=e.target,questions=[...f.querySelectorAll('.qrow')].map((q,n)=>({key:'question_'+(n+1),label:q.querySelector('[name="label"]').value,type:q.querySelector('[name="type"]').value,required:q.querySelector('[name="required"]').checked,options:q.querySelector('[name="options"]').value.split('|').map(x=>x.trim()).filter(Boolean)}));const b={title:f.title.value,description:f.description.value,image_url:f.image_url.value,questions,publish:f.publish?.checked===true};try{const id=Number(f.recruitment_id.value)||0;await api(id?'/api/developer/recruitments/'+id:'/api/developer/recruitments',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});toast('Formulaire enregistré.');m.remove();load('recruitments')}catch(x){toast(x.message,false)}}
