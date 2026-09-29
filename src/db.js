@@ -214,9 +214,31 @@ export function upsertQuota(d){
  return getQuotaEntry(r.lastInsertRowid,d.guildId);
 }
 function ensureQuotaImportColumns(){
- const cols=db.prepare('PRAGMA table_info(quota_entries)').all().map(x=>x.name);
- if(!cols.includes('import_batch_id')) db.exec('ALTER TABLE quota_entries ADD COLUMN import_batch_id INTEGER');
- if(!cols.includes('imported_at')) db.exec('ALTER TABLE quota_entries ADD COLUMN imported_at TEXT');
+ db.exec(`CREATE TABLE IF NOT EXISTS quota_imports (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id TEXT NOT NULL,
+  import_uid TEXT NOT NULL UNIQUE,
+  source_hash TEXT NOT NULL,
+  period_start TEXT NOT NULL,
+  period_end TEXT NOT NULL,
+  imported_by TEXT,
+  imported_by_name TEXT,
+  imported_at TEXT NOT NULL,
+  source_text TEXT NOT NULL DEFAULT '',
+  imported_count INTEGER NOT NULL DEFAULT 0,
+  created_count INTEGER NOT NULL DEFAULT 0,
+  skipped_count INTEGER NOT NULL DEFAULT 0,
+  error_count INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'completed'
+ )`);
+ db.exec('CREATE INDEX IF NOT EXISTS idx_quota_imports_guild_date ON quota_imports(guild_id,imported_at DESC)');
+ db.exec('CREATE INDEX IF NOT EXISTS idx_quota_imports_hash ON quota_imports(guild_id,source_hash)');
+ const qcols=db.prepare('PRAGMA table_info(quota_entries)').all().map(x=>x.name);
+ if(!qcols.includes('import_batch_id')) db.exec('ALTER TABLE quota_entries ADD COLUMN import_batch_id INTEGER');
+ if(!qcols.includes('imported_at')) db.exec('ALTER TABLE quota_entries ADD COLUMN imported_at TEXT');
+ const icols=db.prepare('PRAGMA table_info(quota_imports)').all().map(x=>x.name);
+ const additions=[['source_text',"TEXT NOT NULL DEFAULT ''"],['imported_count','INTEGER NOT NULL DEFAULT 0'],['created_count','INTEGER NOT NULL DEFAULT 0'],['skipped_count','INTEGER NOT NULL DEFAULT 0'],['error_count','INTEGER NOT NULL DEFAULT 0'],['status',"TEXT NOT NULL DEFAULT 'completed'"]];
+ for(const [name,type] of additions) if(!icols.includes(name)) db.exec('ALTER TABLE quota_imports ADD COLUMN '+name+' '+type);
 }
 ensureQuotaImportColumns();
 
