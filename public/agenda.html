@@ -1,1 +1,66 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LS CUSTOM — Connexion</title><link rel="stylesheet" href="/ls-custom-theme.css"></head><body><main style="min-height:100vh;display:grid;place-items:center;padding:20px;background:#070707"><section class="org-panel" style="width:min(430px,100%);text-align:center"><div class="avatar" style="margin:0 auto 18px;width:52px;height:52px">LS</div><p class="section-sub">ESPACE LS CUSTOM</p><h1>Connexion</h1><p class="muted">Sur Discord, utilise <b>/connexion</b>. Le bot vérifie ton rôle et t’envoie un code temporaire valable 5 minutes.</p><form id="loginForm" style="display:grid;gap:12px;margin-top:20px"><input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" required style="font-size:28px;text-align:center;letter-spacing:7px;background:#0b0b0b;color:#fff;border:1px solid #303030;border-radius:10px;padding:13px"><button class="primary" style="border:0;border-radius:10px;padding:12px;font-weight:900;cursor:pointer">SE CONNECTER</button></form><div id="error" style="color:#ff7272;margin-top:10px"></div></section></main><script src="/agenda.js"></script></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LS CUSTOM — Connexion</title>
+<link rel="stylesheet" href="/ls-custom-theme.css">
+<style>
+:root{--gold:#f5a623;--gold-soft:#ffd37a;--bg:#060606;--panel:rgba(15,15,16,.82);--line:rgba(255,255,255,.09)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -10%,rgba(245,166,35,.13),transparent 34%),radial-gradient(circle at 85% 80%,rgba(255,255,255,.035),transparent 30%),#050505;color:#fff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);background-size:44px 44px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.8),transparent 85%)}
+.login-shell{min-height:100vh;display:grid;place-items:center;padding:28px;position:relative}
+.login-card{width:min(480px,100%);position:relative;padding:38px;border:1px solid var(--line);border-radius:26px;background:linear-gradient(145deg,rgba(22,22,23,.92),rgba(8,8,8,.9));box-shadow:0 30px 90px rgba(0,0,0,.55),0 0 70px rgba(245,166,35,.055);backdrop-filter:blur(20px);animation:cardIn .65s cubic-bezier(.2,.8,.2,1)}
+.login-card:before{content:"";position:absolute;left:12%;right:12%;top:-1px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.8}
+.brand{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:28px}
+.brand-mark{width:48px;height:48px;display:grid;place-items:center;border-radius:15px;background:linear-gradient(145deg,#f5a623,#b66d08);color:#080808;font-weight:950;letter-spacing:-1px;box-shadow:0 10px 30px rgba(245,166,35,.18)}
+.brand-text{font-weight:950;letter-spacing:.8px}.brand-text span{display:block;font-size:11px;letter-spacing:2.5px;color:#858585;font-weight:700;margin-top:2px}
+.eyebrow{text-align:center;color:var(--gold-soft);font-size:11px;font-weight:900;letter-spacing:3px;text-transform:uppercase;margin:0 0 10px}
+h1{text-align:center;font-size:34px;line-height:1.05;margin:0;letter-spacing:-1.3px}
+.subtitle{text-align:center;color:#9d9d9d;line-height:1.6;margin:14px auto 28px;max-width:360px;font-size:14px}
+.discord-btn{display:flex;align-items:center;justify-content:center;gap:11px;width:100%;min-height:54px;border:0;border-radius:14px;background:#5865f2;color:#fff;text-decoration:none;font-size:14px;font-weight:900;letter-spacing:.2px;box-shadow:0 12px 30px rgba(88,101,242,.22);transition:transform .2s ease,box-shadow .2s ease,filter .2s ease}
+.discord-btn:hover{transform:translateY(-2px);box-shadow:0 17px 38px rgba(88,101,242,.3);filter:brightness(1.06)}
+.discord-btn:active{transform:translateY(0)}
+.discord-icon{width:22px;height:22px;fill:currentColor}
+.divider{display:flex;align-items:center;gap:12px;margin:25px 0 20px;color:#666;font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase}.divider:before,.divider:after{content:"";height:1px;flex:1;background:var(--line)}
+.code-box{padding:17px;border:1px solid rgba(255,255,255,.07);border-radius:16px;background:rgba(255,255,255,.025)}
+.code-title{font-size:12px;font-weight:850;margin-bottom:6px}.code-help{font-size:12px;color:#777;line-height:1.45;margin:0 0 12px}
+#loginForm{display:grid;gap:10px}#code{width:100%;font-size:24px;text-align:center;letter-spacing:7px;background:#090909;color:#fff;border:1px solid #292929;border-radius:11px;padding:12px;outline:none;transition:border-color .2s,box-shadow .2s}#code:focus{border-color:rgba(245,166,35,.7);box-shadow:0 0 0 4px rgba(245,166,35,.08)}
+.code-submit{border:1px solid rgba(245,166,35,.3);border-radius:11px;padding:12px;background:rgba(245,166,35,.08);color:#ffd37a;font-weight:900;cursor:pointer;transition:.2s}.code-submit:hover{background:rgba(245,166,35,.14);transform:translateY(-1px)}
+#error{min-height:18px;color:#ff7676;font-size:12px;text-align:center;margin-top:9px}
+.security{text-align:center;color:#656565;font-size:11px;margin:22px 0 0}.security strong{color:#8c8c8c}
+@keyframes cardIn{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@media(max-width:520px){.login-shell{padding:16px}.login-card{padding:28px 20px;border-radius:22px}h1{font-size:30px}.brand{margin-bottom:24px}}
+@media(prefers-reduced-motion:reduce){.login-card{animation:none}.discord-btn,.code-submit{transition:none}}
+</style>
+</head>
+<body>
+<main class="login-shell">
+<section class="login-card" aria-labelledby="loginTitle">
+<div class="brand"><div class="brand-mark">LS</div><div class="brand-text">LS CUSTOM<span>RED SIDE RP</span></div></div>
+<p class="eyebrow">Espace membre</p>
+<h1 id="loginTitle">Bienvenue.</h1>
+<p class="subtitle">Connecte ton compte Discord pour accéder à ton espace LS CUSTOM et retrouver ton suivi.</p>
+
+<a class="discord-btn" href="/auth/player/login">
+<svg class="discord-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.54 5.03A16.84 16.84 0 0 0 15.4 3.76l-.5 1.02a15.4 15.4 0 0 0-5.8 0l-.5-1.02a16.9 16.9 0 0 0-4.15 1.27C1.82 8.82 1.1 12.5 1.45 16.13a16.98 16.98 0 0 0 5.1 2.6l1.23-1.68c-.67-.25-1.3-.57-1.9-.94l.46-.35c3.67 1.7 7.64 1.7 11.27 0l.47.35c-.6.37-1.24.69-1.9.94l1.22 1.68a16.95 16.95 0 0 0 5.1-2.6c.4-4.2-.69-7.84-2.96-11.1ZM8.5 14.02c-1.1 0-2-.99-2-2.2s.88-2.2 2-2.2c1.13 0 2 .99 2 2.2s-.88 2.2-2 2.2Zm7 0c-1.1 0-2-.99-2-2.2s.88-2.2 2-2.2 2 .99 2 2.2-.87 2.2-2 2.2Z"/></svg>
+<span>Se connecter avec Discord</span>
+</a>
+
+<div class="divider">ou avec un code</div>
+<div class="code-box">
+<div class="code-title">Code temporaire</div>
+<p class="code-help">Utilise <strong>/connexion</strong> sur le serveur Discord LS CUSTOM. Le code reçu est valable 5 minutes.</p>
+<form id="loginForm">
+<input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required aria-label="Code temporaire à 6 chiffres">
+<button class="code-submit" type="submit">Continuer avec le code</button>
+</form>
+<div id="error" role="alert"></div>
+</div>
+<p class="security">Connexion sécurisée via <strong>Discord OAuth2</strong></p>
+</section>
+</main>
+<script src="/agenda.js"></script>
+</body>
+</html>
