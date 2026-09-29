@@ -252,13 +252,13 @@ app.post('/api/employee/quotas/import',playerAuth,async(req,res)=>{try{
  const normalizeName=v=>String(v||'').replace(/^[•▪●\-*–—]+\s*/,'').replace(/^\d+[.)]\s*/,'').replace(/[*_]/g,'').replace(/\s+/g,' ').trim();
  const findField=(line,labels)=>{
    for(const label of labels){
-     const re=new RegExp('(?:^|[|·•;\\t]|\\s)'+label+'\\s*(?::|=|-)??\\s*\\$?\\s*([\\d\\u00a0\\u202f\\s.,]+)','i');
+     const re=new RegExp('(?:^|[|·•;\\t]|\\s)'+label+'\\s*(?::|=|-)?\\s*\\$?\\s*([\\d\\u00a0\\u202f\\s.,]+)','i');
      const m=line.match(re);
      if(m)return Number(String(m[1]).replace(/[^0-9]/g,''))||0;
    }
    return 0;
  };
- const rows=raw.replace(/\\r/g,'').split(/\\n/).map(x=>x.trim()).filter(Boolean);
+ const rows=raw.replace(/\r/g,'').split(/\\n/).map(x=>x.trim()).filter(Boolean);
  const parsed=[],errors=[];
  let current=null;
  const flush=()=>{if(current){if(current.name)parsed.push(current);current=null;}};
