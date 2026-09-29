@@ -1,5 +1,5 @@
 (()=>{const path=location.pathname;const publicPage=['/connexion','/','/podium'].includes(path)||path.startsWith('/recrutement/');if(publicPage)return;
-const api=(u,o)=>fetch(u,o).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Erreur');return d});
+const api=async(u,o)=>{const r=await fetch(u,o);const d=await r.json().catch(()=>({}));if((r.status===401||r.status===403)&&location.pathname!=='/connexion'){location.replace('/connexion');throw Error('Session expirée');}if(!r.ok)throw Error(d.error||'Erreur');return d};
 const links=[['/dashboard','⌂','Tableau de bord'],['/equipe','♙','Équipe'],['/activite','▦','Activité & quotas'],['/agenda','□','Agenda RH'],['/annonces','◉','Annonces'],['/messagerie','✉','Messagerie'],['/partenariats','◇','Partenariats'],['/developpeur','⚙','Développeur']];
 const perms={'/equipe':'team','/partenariats':'partnerships','/developpeur':'developer'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
