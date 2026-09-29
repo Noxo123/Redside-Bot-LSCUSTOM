@@ -1,5 +1,6 @@
 import express from 'express';
 import session from 'express-session';
+import Database from 'better-sqlite3';
 import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -8,6 +9,18 @@ import db,{getRecruitments,getRecruitment,createRecruitment,createApplication,ha
 import {notifyWebsiteApplication,notifyWebsiteTicket,getMemberAccess,client,sendPartnershipPortalMessage,ensurePartnershipDiscordTicket,publishFromDashboard} from './bot.js';
 
 const app=express();
+app.set('trust proxy',1);
+const sessionDb=new Database(path.join('data','redside.sqlite'));
+sessionDb.pragma('journal_mode = WAL');
+sessionDb.exec(\`CREATE TABLE IF NOT EXISTS web_sessions (sid TEXT PRIMARY KEY, sess TEXT NOT NULL, expires_at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS idx_web_sessions_expires ON web_sessions(expires_at);\`);
+class SQLiteSessionStore extends session.Store {
+  constructor(){super();this.cleanupStmt=sessionDb.prepare('DELETE FROM web_sessions WHERE expires_at <= ?');this.getStmt=sessionDb.prepare('SELECT sess,expires_at FROM web_sessions WHERE sid=?');this.setStmt=sessionDb.prepare('INSERT INTO web_sessions(sid,sess,expires_at) VALUES(?,?,?) ON CONFLICT(sid) DO UPDATE SET sess=excluded.sess,expires_at=excluded.expires_at');this.destroyStmt=sessionDb.prepare('DELETE FROM web_sessions WHERE sid=?');this.touchStmt=sessionDb.prepare('UPDATE web_sessions SET expires_at=? WHERE sid=?');}
+  get(sid,cb){try{this.cleanupStmt.run(Date.now());const row=this.getStmt.get(sid);if(!row)return cb(null,null);if(row.expires_at<=Date.now()){this.destroyStmt.run(sid);return cb(null,null)}cb(null,JSON.parse(row.sess))}catch(e){cb(e)}}
+  set(sid,sess,cb){try{const expiresAt=sess.cookie?.expires?new Date(sess.cookie.expires).getTime():Date.now()+7*86400000;this.setStmt.run(sid,JSON.stringify(sess),expiresAt);cb?.(null)}catch(e){cb?.(e)}}
+  destroy(sid,cb){try{this.destroyStmt.run(sid);cb?.(null)}catch(e){cb?.(e)}}
+  touch(sid,sess,cb){try{const expiresAt=sess.cookie?.expires?new Date(sess.cookie.expires).getTime():Date.now()+7*86400000;this.touchStmt.run(expiresAt,sid);cb?.(null)}catch(e){cb?.(e)}}
+}
+const sessionStore=new SQLiteSessionStore();
 const uploadDir=path.resolve('data/uploads');
 const paymentProofDir=path.join(uploadDir,'payment-proofs');
 const partnershipFileDir=path.join(uploadDir,'partnership-files');
@@ -71,7 +84,7 @@ app.use(express.urlencoded({extended:true}));
 app.use(express.static('public'));
 app.use('/uploads/payment-proofs',(req,res)=>res.sendStatus(404));
 app.use('/uploads',express.static(uploadDir));
-app.use(session({secret:process.env.SESSION_SECRET||'dev-secret',resave:false,saveUninitialized:false,cookie:{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:7*86400000}}));
+app.use(session({secret:process.env.SESSION_SECRET||'dev-secret',store:sessionStore,resave:false,saveUninitialized:false,cookie:{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:7*86400000}}));
 
 const clean=(v,max)=>String(v??'').trim().slice(0,max);
 const publicGuildId=()=>process.env.DEFAULT_GUILD_ID||null;
