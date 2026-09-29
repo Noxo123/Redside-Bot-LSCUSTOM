@@ -55,7 +55,7 @@ function openImport(){
      close();await load(periodStart,periodEnd);
      alert(r.count+' ligne(s) importée(s). Import enregistré le '+formatDateTime(r.import?.imported_at)+(r.created?.length?' · '+r.created.length+' personne(s) créée(s).':'')+(r.errors?.length?' · '+r.errors.length+' ligne(s) ignorée(s).':''));
    }catch(e){
-     progress.classList.add('hidden');err.textContent=e.message||'Impossible d’enregistrer l’import.';btn.disabled=false;btn.textContent='Importer et sauvegarder';
+     progress.classList.add('hidden');err.textContent=(e.message||'Impossible d’enregistrer l’import.')+(Array.isArray(e.data?.errors)&&e.data.errors.length?' — '+e.data.errors.slice(0,5).map(x=>'ligne '+x.line+': '+x.error).join(' · '):'');btn.disabled=false;btn.textContent='Importer et sauvegarder';
    }
  };
 }
