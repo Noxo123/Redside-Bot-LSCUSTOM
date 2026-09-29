@@ -345,3 +345,8 @@ export function getMailConversations(guildId,type,id){
 }
 export function getMailMessages(guildId,type,id,conversationKey){const allowed=db.prepare('SELECT 1 FROM private_mail WHERE guild_id=? AND conversation_key=? AND ((sender_type=? AND sender_id=?) OR (recipient_type=? AND recipient_id=?)) LIMIT 1').get(guildId,conversationKey,type,String(id),type,String(id));if(!allowed)return null;return db.prepare('SELECT * FROM private_mail WHERE guild_id=? AND conversation_key=? ORDER BY id ASC').all(guildId,conversationKey)}
 export function markMailConversationRead(guildId,type,id,conversationKey){return db.prepare('UPDATE private_mail SET read_at=? WHERE guild_id=? AND conversation_key=? AND recipient_type=? AND recipient_id=? AND read_at IS NULL').run(new Date().toISOString(),guildId,conversationKey,type,String(id)).changes}
+
+export function getLatestMailTargetForRecipient(guildId,type,id){
+  const row=db.prepare('SELECT * FROM private_mail WHERE guild_id=? AND recipient_type=? AND recipient_id=? ORDER BY id DESC LIMIT 1').get(guildId,type,String(id));
+  return row||null;
+}
