@@ -1,6 +1,6 @@
 (()=>{const path=location.pathname;const publicPage=['/connexion','/','/podium'].includes(path)||path.startsWith('/recrutement/');if(publicPage)return;
 const api=(u,o)=>fetch(u,o).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Erreur');return d});
-const links=[['/dashboard','⌂','Tableau de bord'],['/equipe','♙','Équipe'],['/activite','▦','Activité & quotas'],['/agenda','□','Agenda RH'],['/partenariats','◇','Partenariats'],['/developpeur','⚙','Développeur']];
+const links=[['/dashboard','⌂','Tableau de bord'],['/equipe','♙','Équipe'],['/activite','▦','Activité & quotas'],['/agenda','□','Agenda RH'],['/annonces','◉','Annonces'],['/messagerie','✉','Messagerie'],['/partenariats','◇','Partenariats'],['/developpeur','⚙','Développeur']];
 const perms={'/equipe':'team','/partenariats':'partnerships','/developpeur':'developer'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function shell(access,user){
