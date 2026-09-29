@@ -93,8 +93,8 @@ async function main(){
    (access.isAdmin||access.permissions.includes('partnerships')||access.permissions.includes('all'))?api('/api/employee/partnerships'):Promise.resolve([]),
    api('/api/employee/agenda')
   ]);
-  render({overview:results[0],rows:results[1].rows||[],team:results[2]||[],partnerships:results[3]||[],absences:results[4]||[]});
+  const normalizeRows=v=>Array.isArray(v)?v:(Array.isArray(v?.rows)?v.rows:[]);\n  render({overview:results[0]||{},rows:normalizeRows(results[1]),team:normalizeRows(results[2]),partnerships:normalizeRows(results[3]),absences:normalizeRows(results[4])});
   const refreshEl=$('#refreshLabel'); if(refreshEl) refreshEl.textContent='Mis à jour à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
- }catch(e){$('#content').innerHTML='<div class="dash-error">'+esc(e.message)+'</div>'}
+ }catch(e){const content=$('#content');if(content)content.innerHTML='<div class="dash-error">'+esc(e.message)+'</div>'}
 }
 main();
