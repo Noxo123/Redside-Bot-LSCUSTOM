@@ -298,13 +298,26 @@ export function saveQuotaImport(d){
    for(const row of (d.rows||[])){
      const key=normalizeEmployeeName(row.name);
      const candidates=employeeGroups.get(key)||[];
-     if(!candidates.length){
-       skipped.push({name:row.name,reason:'Aucun employé Discord correspondant. Aucune fiche créée.'});
-       continue;
+     let employee=null;
+     if(candidates.length){
+       const before=candidates.length;
+       employee=consolidateDuplicates(candidates);
+       if(before>1)cleaned.push({name:row.name,removed:before-1,kept:employee?.display_name||employee?.username,role:employee?.role_name||employee?.role_key||null});
+     }else{
+       const cleanName=String(row.name||'Employé').trim();
+       const slug=normalizeEmployeeName(cleanName).replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||crypto.randomUUID();
+       employee=upsertEmployee({
+         guildId:d.guildId,
+         userId:'import:'+slug,
+         username:cleanName,
+         displayName:cleanName,
+         status:'active',
+         quotaEnabled:true,
+         quotaTarget:0,
+         notes:'Employé créé automatiquement lors d’un import RH.'
+       });
+       employeeGroups.set(key,[employee]);
      }
-     const before=candidates.length;
-     const employee=consolidateDuplicates(candidates);
-     if(before>1)cleaned.push({name:row.name,removed:before-1,kept:employee?.display_name||employee?.username,role:employee?.role_name||employee?.role_key||null});
      if(!employee){
        skipped.push({name:row.name,reason:'Employé introuvable.'});
        continue;
@@ -312,7 +325,7 @@ export function saveQuotaImport(d){
      upsertQuota({...row,guildId:d.guildId,employeeId:employee.id,periodStart:d.periodStart,periodEnd:d.periodEnd,importBatchId:batchId,importedAt,note:'Import RH des interventions'});
      imported.push({name:row.name,employeeId:employee.id,role:employee.role_name||employee.role_key||null});
    }
-   db.prepare('UPDATE quota_imports SET imported_count=?,created_count=?,skipped_count=?,status=? WHERE id=?').run(imported.length,0,skipped.length,'completed',batchId);
+   db.prepare('UPDATE quota_imports SET imported_count=?,created_count=?,skipped_count=?,status=? WHERE id=?').run(imported.length,imported.filter(x=>String(x.employeeId||'')==='').length,skipped.length,'completed',batchId);
    return {batchId,importUid,imported,created:[],skipped,cleaned};
  });
  const result=tx();
