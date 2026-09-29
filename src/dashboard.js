@@ -12,7 +12,7 @@ const app=express();
 app.set('trust proxy',1);
 const sessionDb=new Database(path.join('data','redside.sqlite'));
 sessionDb.pragma('journal_mode = WAL');
-sessionDb.exec(\`CREATE TABLE IF NOT EXISTS web_sessions (sid TEXT PRIMARY KEY, sess TEXT NOT NULL, expires_at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS idx_web_sessions_expires ON web_sessions(expires_at);\`);
+sessionDb.exec(`CREATE TABLE IF NOT EXISTS web_sessions (sid TEXT PRIMARY KEY, sess TEXT NOT NULL, expires_at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS idx_web_sessions_expires ON web_sessions(expires_at);`);
 class SQLiteSessionStore extends session.Store {
   constructor(){super();this.cleanupStmt=sessionDb.prepare('DELETE FROM web_sessions WHERE expires_at <= ?');this.getStmt=sessionDb.prepare('SELECT sess,expires_at FROM web_sessions WHERE sid=?');this.setStmt=sessionDb.prepare('INSERT INTO web_sessions(sid,sess,expires_at) VALUES(?,?,?) ON CONFLICT(sid) DO UPDATE SET sess=excluded.sess,expires_at=excluded.expires_at');this.destroyStmt=sessionDb.prepare('DELETE FROM web_sessions WHERE sid=?');this.touchStmt=sessionDb.prepare('UPDATE web_sessions SET expires_at=? WHERE sid=?');}
   get(sid,cb){try{this.cleanupStmt.run(Date.now());const row=this.getStmt.get(sid);if(!row)return cb(null,null);if(row.expires_at<=Date.now()){this.destroyStmt.run(sid);return cb(null,null)}cb(null,JSON.parse(row.sess))}catch(e){cb(e)}}
