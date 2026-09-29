@@ -254,10 +254,21 @@ app.post('/api/employee/quotas/import',playerAuth,async(req,res)=>{try{
    return m?Number(m[1].replace(/[^0-9]/g,''))||0:0;
  };
  const rows=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),parsed=[],errors=[];
+ const normalizeName=v=>String(v||'').replace(/^[•▪●\-–—]+\s*/,'').replace(/^\d+[.)]\s*/,'').replace(/[*_]/g,'').trim();
+ const findField=(line,labels)=>{
+   for(const label of labels){
+     const re=new RegExp(label+'\\s*:\\s*\\$?\\s*([\\d\\u00a0\\u202f\\s.,]+)','i'),m=line.match(re);
+     if(m)return Number(m[1].replace(/[^0-9]/g,''))||0;
+   }
+   return 0;
+ };
  for(let i=0;i<rows.length;i++){
-   const line=rows[i],head=line.match(/^\d+\.\s*(.*?)\s+—\s*Appels\s*:/i);
-   if(!head){if(/Appels\s*:/i.test(line))errors.push({line:i+1,error:'Format de nom/intervention non reconnu.'});continue}
-   const name=head[1].replace(/\s+/g,' ').trim();
+   const line=rows[i];
+   if(!/Appels\\s*:/i.test(line))continue;
+   const head=line.match(/^(?:\\d+[.)]\\s*)?(.*?)\\s*(?:—|–|-|:)\\s*Appels\\s*:/i);
+   if(!head){errors.push({line:i+1,error:'Format de nom/intervention non reconnu.'});continue}
+   const name=normalizeName(head[1]);
+
    if(!name){errors.push({line:i+1,error:'Nom employé manquant.'});continue}
    parsed.push({name,appels:value(line,'Appels'),reparations:value(line,'Réparations'),fourrieres:value(line,'Mises en fourrière'),personnalisations:value(line,'Personnalisations'),factures:value(line,'Factures encaissées'),montantFourrieres:value(line,'Montant fourrière'),montantPersonnalisations:value(line,'Montant personnalisations'),montantFactures:value(line,'Montant factures')});
  }
