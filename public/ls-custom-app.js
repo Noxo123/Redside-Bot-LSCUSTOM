@@ -5,11 +5,34 @@ const perms={'/equipe':'team','/partenariats':'partnerships','/developpeur':'dev
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function shell(access,user){
  const oldAside=document.querySelector('body > div > aside'),root=oldAside?.parentElement;if(!root)return;
- root.classList.add('ls-shell');oldAside?.remove();
+ root.classList.add('ls-shell');
+ /* Force the shared application shell to be a real desktop 2-column layout.
+    Some page-local CSS rules are loaded after the theme, so use inline !important styles here. */
+ root.style.setProperty('display','grid','important');
+ root.style.setProperty('grid-template-columns','270px minmax(0,1fr)','important');
+ root.style.setProperty('grid-template-rows','1fr','important');
+ root.style.setProperty('align-items','stretch','important');
+ root.style.setProperty('width','100%','important');
+ root.style.setProperty('min-height','100vh','important');
+ oldAside?.remove();
  const aside=document.createElement('aside');aside.className='ls-app-sidebar';
+ aside.style.setProperty('grid-column','1','important');
+ aside.style.setProperty('grid-row','1','important');
+ aside.style.setProperty('width','270px','important');
+ aside.style.setProperty('min-width','270px','important');
+ aside.style.setProperty('height','100vh','important');
+ aside.style.setProperty('position','sticky','important');
+ aside.style.setProperty('top','0','important');
  aside.innerHTML='<div class="ls-sidebar-inner"><div class="ls-brand-block"><div class="ls-logo-mark">LS</div><div><div class="ls-brand">LS CUSTOM</div><div class="ls-subbrand">REDSIDE RP · MANAGEMENT</div></div></div><nav class="ls-sidebar-nav">'+links.map(([href,icon,label])=>{const p=perms[href];if(p==='developer'&&!access?.isAdmin)return '';if(p&&p!=='developer'&&!access?.isAdmin&&!access?.permissions?.includes(p)&&!access?.permissions?.includes('all'))return '';return '<a href="'+href+'" class="'+(path===href?'is-active':'')+'"><span class="nav-icon">'+icon+'</span><span>'+label+'</span></a>'}).join('')+'</nav><button id="logout" type="button">Déconnexion</button></div>';
  root.prepend(aside);
  const main=root.querySelector(':scope > main');if(!main)return;
+ main.style.setProperty('grid-column','2','important');
+ main.style.setProperty('grid-row','1','important');
+ main.style.setProperty('min-width','0','important');
+ main.style.setProperty('width','auto','important');
+ main.style.setProperty('margin','0','important');
+ main.style.setProperty('padding','0 40px 70px','important');
+ main.style.setProperty('display','block','important');
  main.querySelector(':scope > .ls-topbar')?.remove();
  const avatar=user.avatar_url||user.avatar||'',name=user.global_name||user.display_name||user.username||'Utilisateur',role=(access.roles||[]).map(r=>r.name||r.key).filter(Boolean).join(' · ')||'Membre LS Custom';
  const top=document.createElement('div');top.className='ls-topbar';
