@@ -249,33 +249,57 @@ app.post('/api/employee/quotas/import',playerAuth,async(req,res)=>{try{
  if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end)||start>end)return res.status(400).json({error:'Période invalide.'});
  if(raw.trim().length<20)return res.status(400).json({error:'Colle le relevé complet des interventions.'});
 
- const value=(line,label)=>{
-   const m=line.match(new RegExp(label+'\\s*:\\s*\$?\\s*([\\d\\u00a0\\u202f\\s]+)','i'));
-   return m?Number(m[1].replace(/[^0-9]/g,''))||0:0;
- };
- const rows=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),parsed=[],errors=[];
- const normalizeName=v=>String(v||'').replace(/^[•▪●\-–—]+\s*/,'').replace(/^\d+[.)]\s*/,'').replace(/[*_]/g,'').trim();
+ const normalizeName=v=>String(v||'').replace(/^[•▪●\-*–—]+\s*/,'').replace(/^\d+[.)]\s*/,'').replace(/[*_]/g,'').replace(/\s+/g,' ').trim();
  const findField=(line,labels)=>{
    for(const label of labels){
-     const re=new RegExp(label+'\\s*:\\s*\\$?\\s*([\\d\\u00a0\\u202f\\s.,]+)','i'),m=line.match(re);
-     if(m)return Number(m[1].replace(/[^0-9]/g,''))||0;
+     const re=new RegExp('(?:^|[|·•;\\t]|\\s)'+label+'\\s*(?::|=|-)??\\s*\\$?\\s*([\\d\\u00a0\\u202f\\s.,]+)','i');
+     const m=line.match(re);
+     if(m)return Number(String(m[1]).replace(/[^0-9]/g,''))||0;
    }
    return 0;
  };
+ const rows=raw.replace(/\\r/g,'').split(/\\n/).map(x=>x.trim()).filter(Boolean);
+ const parsed=[],errors=[];
+ let current=null;
+ const flush=()=>{if(current){if(current.name)parsed.push(current);current=null;}};
  for(let i=0;i<rows.length;i++){
    const line=rows[i];
-   if(!/Appels\\s*:/i.test(line))continue;
-   const head=line.match(/^(?:\\d+[.)]\\s*)?(.*?)\\s*(?:—|–|-|:)\\s*Appels\\s*:/i);
-   if(!head){errors.push({line:i+1,error:'Format de nom/intervention non reconnu.'});continue}
-   const name=normalizeName(head[1]);
-
-   if(!name){errors.push({line:i+1,error:'Nom employé manquant.'});continue}
-   parsed.push({name,appels:value(line,'Appels'),reparations:value(line,'Réparations'),fourrieres:value(line,'Mises en fourrière'),personnalisations:value(line,'Personnalisations'),factures:value(line,'Factures encaissées'),montantFourrieres:value(line,'Montant fourrière'),montantPersonnalisations:value(line,'Montant personnalisations'),montantFactures:value(line,'Montant factures')});
+   const hasMetric=/(?:Appels|Réparations|Mises? en fourrière|Personnalisations|Factures(?: encaissées)?|Montant (?:fourrière|personnalisations|factures))\\s*(?::|=|-)?/i.test(line);
+   if(!hasMetric)continue;
+   const appels=findField(line,['Appels']);
+   const reparations=findField(line,['Réparations']);
+   const fourrieres=findField(line,['Mises en fourrière','Mises en fourrieres','Fourrières','Fourrieres']);
+   const personnalisations=findField(line,['Personnalisations']);
+   const factures=findField(line,['Factures encaissées','Factures']);
+   const montantFourrieres=findField(line,['Montant fourrière','Montant fourrieres','Montant des fourrières','Montant des fourrieres']);
+   const montantPersonnalisations=findField(line,['Montant personnalisations','Montant des personnalisations']);
+   const montantFactures=findField(line,['Montant factures','Montant des factures']);
+   const marker=line.search(/(?:Appels|Réparations|Mises? en fourrière|Personnalisations|Factures(?: encaissées)?|Montant (?:fourrière|personnalisations|factures))\\s*(?::|=|-)?/i);
+   let name='';
+   if(marker>0)name=normalizeName(line.slice(0,marker).replace(/[|·•;]+$/,''));
+   if(name){
+     flush();
+     current={name,appels,reparations,fourrieres,personnalisations,factures,montantFourrieres,montantPersonnalisations,montantFactures};
+   }else if(current){
+     current.appels+=appels;current.reparations+=reparations;current.fourrieres+=fourrieres;current.personnalisations+=personnalisations;current.factures+=factures;current.montantFourrieres+=montantFourrieres;current.montantPersonnalisations+=montantPersonnalisations;current.montantFactures+=montantFactures;
+   }else{
+     errors.push({line:i+1,error:'Nom employé introuvable sur cette ligne.',text:line.slice(0,180)});
+   }
  }
- if(!parsed.length)return res.status(400).json({error:'Aucune intervention exploitable dans le relevé.',errors});
+ flush();
+ const merged=new Map();
+ for(const row of parsed){
+   const key=row.name.toLocaleLowerCase('fr-FR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\\s+/g,' ').trim();
+   if(!merged.has(key))merged.set(key,row);
+   else{
+     const x=merged.get(key);for(const k of ['appels','reparations','fourrieres','personnalisations','factures','montantFourrieres','montantPersonnalisations','montantFactures'])x[k]+=row[k];
+   }
+ }
+ const normalized=[...merged.values()];
+ if(!normalized.length)return res.status(400).json({error:'Aucune intervention exploitable dans le relevé. Vérifie que chaque ligne contient au moins un indicateur comme « Appels », « Réparations » ou « Factures ».',errors});
  const importedAt=new Date().toISOString();
  const actorName=req.session.player.display_name||req.session.player.global_name||req.session.player.username||'Utilisateur';
- const result=saveQuotaImport({guildId:g,periodStart:start,periodEnd:end,sourceText:raw,rows:parsed,importedBy:req.session.player.id,importedByName:actorName,importedAt});
+ const result=saveQuotaImport({guildId:g,periodStart:start,periodEnd:end,sourceText:raw,rows:normalized.map(row=>({name:row.name,appels:row.appels,reparations:row.reparations,fourrieres:row.fourrieres,personnalisations:row.personnalisations,factures:row.factures,montantFourrieres:row.montantFourrieres,montantPersonnalisations:row.montantPersonnalisations,montantFactures:row.montantFactures})),importedBy:req.session.player.id,importedByName:actorName,importedAt});
  if(result.duplicate)return res.status(409).json({error:'Ce relevé a déjà été importé pour cette période.',duplicate:true,import:result});
  res.status(201).json({ok:true,count:result.imported.length,created:result.created,imported:result.imported,errors,import:result});
 }catch(e){console.error('Import RH:',e);res.status(500).json({error:'Impossible d’enregistrer l’import RH.'})}});
