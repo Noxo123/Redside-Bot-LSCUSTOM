@@ -3,7 +3,7 @@ const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const labels={conges:'Congés',maladie:'Maladie',etudes:'Études',personnel:'Personnel',indisponible:'Indisponible',autre:'Autre'};
 const icons={conges:'☀',maladie:'✚',etudes:'◆',personnel:'●',indisponible:'—',autre:'•'};
-let state={rows:[],canManage:false,filter:'all',month:''};
+let state={rows:[],canManage:false,filter:'all',month:'',selfOnly:false};
 function dateLabel(s){if(!s)return'—';return new Date(s+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}
 function status(a){const today=new Date().toISOString().slice(0,10);if(a.end_date<today)return'past';if(a.start_date>today)return'upcoming';return'current'}
 function render(){
@@ -29,7 +29,7 @@ function setLoading(active=true,message='Chargement de l’agenda RH…'){
 async function load(){
  setLoading(true);
  try{
-  const r=await api('/api/employee/agenda');state.rows=Array.isArray(r)?r:(r.rows||[]);state.canManage=Boolean(r.canManage);window.__meId=window.__meId||'';
+  const access=await api('/api/session/access');state.selfOnly=!access.access?.isAdmin&&(!access.access?.permissions||access.access.permissions.length===0);if(state.selfOnly){const title=document.querySelector('.agenda-hero h1'),intro=document.querySelector('.agenda-hero p'),label=document.querySelector('.agenda-eyebrow'),cal=document.querySelector('.panel-head h2'),side=document.querySelector('.agenda-side .agenda-help');if(title)title.textContent='Mon agenda';if(intro)intro.textContent='Déclare et consulte uniquement tes propres absences et indisponibilités.';if(label)label.textContent='MON ESPACE · ABSENCES';if(cal)cal.textContent='Mes absences';if(side)side.textContent='Déclare tes absences et indisponibilités. Tu ne peux pas consulter les absences des autres membres.'} const r=await api('/api/employee/agenda');state.rows=Array.isArray(r)?r:(r.rows||[]);state.canManage=Boolean(r.canManage);window.__meId=window.__meId||'';
   const me=await api('/api/employee/me').catch(()=>({user:{}}));window.__meId=me.user?.id||'';
   render();const period=$('#period');if(period)period.textContent='Mis à jour à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
  }catch(e){const calendar=$('#calendar');if(calendar)calendar.innerHTML='<div class="agenda-empty"><div class="empty-icon">!</div><strong>Impossible de charger l’agenda</strong><span>'+esc(e.message)+'</span><button class="agenda-btn" type="button" onclick="load()">Réessayer</button></div>'}
