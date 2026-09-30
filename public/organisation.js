@@ -8,6 +8,12 @@ const statusLabel=s=>({active:'Actif',trial:'Période d’essai',leave:'En absen
 const stat=(label,value,detail,icon)=>`<article class="dash-stat"><div class="dash-stat-icon">${icon}</div><div><span>${label}</span><strong>${value}</strong><small>${detail}</small></div></article>`;
 const empty=(title,text)=>`<div class="dash-empty"><strong>${title}</strong><span>${text}</span></div>`;
 
+function renderLimited(row,overview){
+ const r=row||{},target=Number(r.quota_target||overview?.employee?.quota_target||0),custom=Number(r.montant_personnalisations||0);
+ const actions=['appels','reparations','fourrieres','personnalisations','factures'].reduce((n,k)=>n+(Number(r[k])||0),0);
+ const pct=target>0?Math.min(100,Math.round(custom/target*100)):0;
+ $('#content').innerHTML='<section class="dash-grid dash-grid-kpi">'+stat('Mon quota',money(custom),'personnalisations réalisées','01')+stat('Objectif',money(target),'objectif individuel','02')+stat('Mes actions',actions,'interventions cette semaine','03')+stat('Progression',pct+'%','sur mon quota','04')+'</section><section class="dash-grid dash-grid-main"><article class="dash-card dash-card-wide"><div class="dash-card-head"><div><span class="dash-label">MON SUIVI</span><h2>Mon quota de la semaine</h2></div><a href="/activite" class="dash-link">Voir mon activité →</a></div><div class="quota-overview"><div class="quota-overview-top"><div><b>'+money(custom)+'</b><span>personnalisations réalisées</span></div><div class="quota-big">'+pct+'%</div></div><div class="quota-track"><i style="width:'+pct+'%"></i></div><div class="quota-overview-foot"><span>'+actions+' action'+(actions>1?'s':'')+' enregistrée'+(actions>1?'s':'')+'</span><strong>'+money(target)+' / objectif</strong></div></div><div class="metric-grid"><div><span>Appels</span><b>'+Number(r.appels||0)+'</b></div><div><span>Réparations</span><b>'+Number(r.reparations||0)+'</b></div><div><span>Fourrières</span><b>'+Number(r.fourrieres||0)+'</b></div><div><span>Personnalisations</span><b>'+Number(r.personnalisations||0)+'</b></div><div><span>Factures</span><b>'+Number(r.factures||0)+'</b></div></div></article></section><section class="dash-card dash-actions"><div class="dash-card-head"><div><span class="dash-label">MON ESPACE</span><h2>Accès personnels</h2></div></div><div class="action-grid"><a href="/agenda"><b>Déclarer une absence</b><span>Gérer uniquement mes disponibilités et absences</span><i>→</i></a><a href="/activite"><b>Mon activité</b><span>Consulter uniquement mes quotas</span><i>→</i></a></div></section>';
+}
 function render(data){
  const {overview,rows,team,partnerships,absences}=data;
  const totals=['appels','reparations','fourrieres','personnalisations','factures','montant_fourrieres','montant_personnalisations','montant_factures'].reduce((o,k)=>{o[k]=(rows||[]).reduce((n,r)=>n+(Number(r[k])||0),0);return o},{});
@@ -80,12 +86,20 @@ async function main(){
  try{
   const r=await api('/api/session/access');
   const access=r.access;
-  const userEl=$('#user'); if(userEl) userEl.textContent=(r.user.global_name||r.user.username)+' — '+(access.isAdmin?'Gérant légal / Développeur':(access.roles||[]).map(x=>x.name).join(' • ')||'Employé');
+  const userEl=$('#user');
+  const limited=!access.isAdmin&&access.permissions.length===0; if(userEl) userEl.textContent=(r.user.global_name||r.user.username)+' — '+(access.isAdmin?'Gérant légal / Développeur':(access.roles||[]).map(x=>x.name).join(' • ')||'Employé');
   document.querySelectorAll('[data-permission]').forEach(a=>{if(!(access.isAdmin||access.permissions.includes(a.dataset.permission)||access.permissions.includes('all')))a.remove()});
   if(access.isAdmin)$('#developerNav').classList.remove('hidden');
   $('#logout').onclick=async()=>{await api('/auth/player/logout',{method:'POST'});location.href='/connexion'};
   const [start,end]=week();
   const periodEl=$('#periodLabel'); if(periodEl) periodEl.textContent=start+' → '+end;
+  if(limited){
+   const overview=await api('/api/employee/overview');
+   const activity=await api('/api/employee/activity?start='+start+'&end='+end);
+   renderLimited(Array.isArray(activity?.rows)?activity.rows[0]:null,overview);
+   const refreshEl=$('#refreshLabel'); if(refreshEl) refreshEl.textContent='Mis à jour à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+   return;
+  }
   const results=await Promise.all([
    api('/api/employee/overview'),
    api('/api/employee/activity?start='+start+'&end='+end),
