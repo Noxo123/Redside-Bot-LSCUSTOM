@@ -401,3 +401,103 @@ textarea{max-width:100%}
 @media(prefers-reduced-motion:reduce){
   .ls-mobile-menu-panel,.ls-mobile-dock,.dash-card,.dash-stat,.partner-row,.partner-ticket-row{animation:none!important;transition:none!important}
 }
+
+
+/* ===== LS CUSTOM UI/UX v4 — adaptive sidebar + motion system ===== */
+/* Desktop → compact tablet → mobile. The sidebar remains usable until mobile width. */
+@media (min-width:901px) and (max-width:1180px){
+  body>.ls-shell{grid-template-columns:78px minmax(0,1fr)!important}
+  body>.ls-shell>.ls-app-sidebar{width:78px!important;min-width:78px!important}
+  body>.ls-shell>main{padding-left:26px!important;padding-right:26px!important}
+  .ls-sidebar-inner{padding:18px 9px!important;align-items:center}
+  .ls-brand-block{justify-content:center!important;width:100%}
+  .ls-brand-block>div:last-child{display:none!important}
+  .ls-logo-mark{margin:0!important}
+  .ls-sidebar-nav{width:100%!important;gap:7px!important}
+  .ls-sidebar-nav a{justify-content:center!important;width:100%!important;height:48px!important;padding:0!important;position:relative}
+  .ls-sidebar-nav a span:not(.nav-icon){display:none!important}
+  .ls-sidebar-nav .nav-icon{font-size:19px!important;margin:0!important}
+  .ls-sidebar-nav a.is-active:after{content:'';position:absolute;right:-9px;top:11px;width:3px;height:26px;border-radius:3px;background:var(--gold);box-shadow:0 0 14px rgba(212,160,23,.45)}
+  #logout{width:48px!important;overflow:hidden!important;font-size:0!important;padding:0!important}
+  #logout:before{content:'↪';font-size:18px}
+}
+@media (min-width:1181px){
+  .ls-sidebar-nav a{transition:transform .22s ease,background .22s ease,color .22s ease,padding .22s ease}
+  .ls-sidebar-nav a:hover{transform:translateX(4px)}
+}
+@media (max-width:900px){
+  .ls-shell>main{padding-top:0!important}
+  .ls-mobile-dock{animation:lsDockIn .45s cubic-bezier(.2,.8,.2,1) both}
+}
+@keyframes lsDockIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+
+/* Page entrance + staggered content reveal */
+body.ls-motion-ready .ls-shell>main{animation:lsMainIn .38s cubic-bezier(.2,.75,.25,1) both}
+body.ls-motion-ready .ls-app-sidebar{animation:lsSidebarIn .45s cubic-bezier(.2,.75,.25,1) both}
+@keyframes lsMainIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes lsSidebarIn{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+
+.ls-shell>main .dash-card,
+.ls-shell>main .dash-stat,
+.ls-shell>main .org-panel,
+.ls-shell>main .agenda-row,
+.ls-shell>main .partner-row,
+.ls-shell>main .metric-card,
+.ls-shell>main .quota-card{
+  transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease,background .22s ease;
+}
+@media (hover:hover){
+  .ls-shell>main .dash-card:hover,
+  .ls-shell>main .org-panel:hover,
+  .ls-shell>main .metric-card:hover,
+  .ls-shell>main .quota-card:hover{
+    transform:translateY(-2px);
+    border-color:rgba(212,160,23,.18);
+    box-shadow:0 16px 42px rgba(0,0,0,.24);
+  }
+  .ls-shell>main .dash-stat:hover{transform:translateY(-3px) scale(1.008)}
+}
+
+/* Inputs feel active without becoming visually noisy */
+input,select,textarea{transition:border-color .2s ease,box-shadow .2s ease,background .2s ease,transform .2s ease}
+input:focus,select:focus,textarea:focus{
+  border-color:rgba(212,160,23,.55)!important;
+  box-shadow:0 0 0 3px rgba(212,160,23,.07),0 8px 25px rgba(0,0,0,.12)!important;
+  outline:none!important;
+}
+
+/* Buttons: premium press/hover feedback */
+button,.ls-btn{transition:transform .18s ease,box-shadow .18s ease,filter .18s ease,background .18s ease,border-color .18s ease}
+@media (hover:hover){
+  button:hover,.ls-btn:hover{filter:brightness(1.08)}
+}
+button:active,.ls-btn:active{transform:translateY(1px) scale(.985)}
+
+/* Modal/sheet polish */
+.ls-profile-overlay[hidden]{display:none!important}
+.ls-profile-overlay{animation:lsOverlayIn .18s ease both}
+.ls-profile-overlay.is-open .ls-profile-menu{animation:lsProfileIn .25s cubic-bezier(.2,.8,.2,1) both}
+@keyframes lsOverlayIn{from{opacity:0}to{opacity:1}}
+@keyframes lsProfileIn{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:none}}
+
+/* Navigation active indicator */
+.ls-sidebar-nav a.is-active{position:relative;overflow:hidden}
+.ls-sidebar-nav a.is-active:before{
+  content:'';position:absolute;left:0;top:8px;bottom:8px;width:2px;border-radius:2px;
+  background:var(--gold);box-shadow:0 0 14px rgba(212,160,23,.55);animation:lsNavIndicator .3s ease both
+}
+@keyframes lsNavIndicator{from{transform:scaleY(0);opacity:0}to{transform:scaleY(1);opacity:1}}
+
+/* Respect touch users: keep motion useful, not hover-dependent. */
+@media (hover:none){
+  .ls-shell>main .dash-card:active,.ls-shell>main .dash-stat:active{transform:scale(.992)}
+}
+@media(prefers-reduced-motion:reduce){
+  body.ls-motion-ready .ls-shell>main,
+  body.ls-motion-ready .ls-app-sidebar,
+  .ls-mobile-dock,.ls-profile-overlay,.ls-profile-overlay.is-open .ls-profile-menu,
+  .ls-sidebar-nav a.is-active:before{animation:none!important}
+  .ls-shell>main .dash-card,.ls-shell>main .dash-stat,.ls-shell>main .org-panel,
+  .ls-shell>main .agenda-row,.ls-shell>main .partner-row,.ls-shell>main .metric-card,
+  .ls-shell>main .quota-card,button,.ls-btn,input,select,textarea{transition:none!important}
+}
