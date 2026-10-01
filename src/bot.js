@@ -9,6 +9,11 @@ async function fetchTextChannel(guild,id){if(!id)return null;const ch=await guil
 const normRoleName=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
 const ADMIN_USER_IDS=(process.env.LS_CUSTOM_ADMIN_USER_IDS||'1375953709388927077').split(',').map(s=>String(s).trim()).filter(Boolean);
 export async function getMemberAccess(guildId,userId){
+  if(String(userId).startsWith('demo:')){
+    const employee=getEmployees(guildId).find(e=>String(e.user_id)===String(userId))||null;
+    if(!employee)return null;
+    return {memberId:String(userId),username:employee.username||'demo',displayName:employee.display_name||'Compte Démo',roleIds:[],roles:[],permissions:[],isAdmin:false,limited:true,employee};
+  }
   await waitForReady();
   const guild=client.guilds.cache.get(guildId)||await client.guilds.fetch(guildId).catch(()=>null);
   if(!guild)return null;
