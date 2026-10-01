@@ -663,3 +663,16 @@ button:active,.ls-btn:active{transform:translateY(1px) scale(.985)}
   .ls-mobile-dock a,.ls-mobile-dock button,.ls-mobile-dock .dock-icon,.ls-mobile-dock a span:last-child{transition:none!important}
   .ls-mobile-dock a.is-active:before{animation:none!important}
 }
+
+
+/* ===== Navigation v6 — no sidebar ===== */
+body > div > aside,
+body > .ls-shell > .ls-app-sidebar,
+.ls-app-sidebar,
+.ls-mobile-sidebar-toggle,
+.ls-mobile-sidebar-top,
+.ls-sidebar-backdrop{display:none!important}
+body > div.ls-shell,
+body > div > .ls-shell,
+.ls-shell{display:block!important;grid-template-columns:minmax(0,1fr)!important;width:100%!important;min-height:100vh!important}
+.ls-shell > main{grid-column:1!important;width:100%!important;max-width:none!important;margin:0!important}
