@@ -684,3 +684,9 @@ body .ls-shell{display:block!important;grid-template-columns:minmax(0,1fr)!impor
 body .ls-shell>main{grid-column:1!important;width:100%!important;max-width:none!important;margin:0!important;min-width:0!important}
 @media(min-width:901px){body .ls-shell>main{padding-left:40px!important;padding-right:40px!important}}
 @media(max-width:900px){body .ls-shell>main{padding-left:14px!important;padding-right:14px!important;padding-bottom:100px!important}}
+
+
+/* ===== Global v7 — every internal page is sidebar-free ===== */
+body aside{display:none!important}
+body .ls-shell{display:block!important;grid-template-columns:minmax(0,1fr)!important;width:100%!important;min-height:100vh!important}
+body .ls-shell>main{grid-column:1!important;width:100%!important;max-width:none!important;margin:0!important;min-width:0!important}
