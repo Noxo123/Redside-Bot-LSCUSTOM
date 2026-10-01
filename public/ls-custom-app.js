@@ -25,6 +25,14 @@ function shell(access,user){
  aside.style.setProperty('top','0','important');
  aside.innerHTML='<div class="ls-sidebar-inner"><div class="ls-brand-block"><div class="ls-logo-mark">LS</div><div><div class="ls-brand">LS CUSTOM</div><div class="ls-subbrand">REDSIDE RP · MANAGEMENT</div></div></div><nav class="ls-sidebar-nav">'+links.map(([href,icon,label])=>{const p=perms[href],limited=!access?.isAdmin&&(!access?.permissions||access.permissions.length===0);if(limited&&href==='/messagerie')return '';if(p==='developer'&&!access?.isAdmin)return '';if(p&&p!=='developer'&&!access?.isAdmin&&!access?.permissions?.includes(p)&&!access?.permissions?.includes('all'))return '';return '<a href="'+href+'" class="'+(path===href?'is-active':'')+'"><span class="nav-icon">'+icon+'</span><span>'+label+'</span></a>'}).join('')+'</nav><button id="logout" type="button">Déconnexion</button></div>';
  root.prepend(aside);
+ const mobileLinks=links.map(([href,icon,label])=>{const p=perms[href],limited=!access?.isAdmin&&(!access?.permissions||access.permissions.length===0);if(limited&&href==='/messagerie')return '';if(p==='developer'&&!access?.isAdmin)return '';if(p&&p!=='developer'&&!access?.isAdmin&&!access?.permissions?.includes(p)&&!access?.permissions?.includes('all'))return '';return {href,icon,label,active:path===href}}).filter(Boolean);
+ const dock=document.createElement('nav');dock.className='ls-mobile-dock';dock.setAttribute('aria-label','Navigation mobile');
+ const primary=mobileLinks.slice(0,3);
+ dock.innerHTML=primary.map(x=>'<a href="'+x.href+'" class="'+(x.active?'is-active':'')+'"><span class="dock-icon">'+x.icon+'</span><span>'+esc(x.label)+'</span></a>').join('')+'<button type="button" id="lsMobileMore" aria-label="Ouvrir le menu"><span class="dock-icon">☰</span><span>Menu</span></button>';
+ document.body.appendChild(dock);
+ const sheet=document.createElement('div');sheet.className='ls-mobile-menu';sheet.innerHTML='<div class="ls-mobile-menu-panel"><div class="ls-mobile-menu-handle"></div><div class="ls-mobile-menu-title">Navigation LS CUSTOM</div><div class="ls-mobile-menu-grid">'+mobileLinks.map(x=>'<a href="'+x.href+'" class="'+(x.active?'is-active':'')+'"><span class="dock-icon">'+x.icon+'</span><span>'+esc(x.label)+'</span></a>').join('')+'</div></div>';
+ document.body.appendChild(sheet);
+ const more=dock.querySelector('#lsMobileMore');const closeMobile=()=>sheet.classList.remove('is-open');more.onclick=()=>sheet.classList.toggle('is-open');sheet.addEventListener('click',e=>{if(e.target===sheet)closeMobile()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMobile()});
  const main=root.querySelector(':scope > main');if(!main)return;
  main.style.setProperty('grid-column','2','important');
  main.style.setProperty('grid-row','1','important');
