@@ -10,27 +10,12 @@ function shell(access,user){
  /* Force the shared application shell to be a real desktop 2-column layout.
     Some page-local CSS rules are loaded after the theme, so use inline !important styles here. */
  root.style.setProperty('display','grid','important');
- root.style.setProperty('grid-template-columns','270px minmax(0,1fr)','important');
+ root.style.setProperty('grid-template-columns','minmax(0,1fr)','important');
  root.style.setProperty('grid-template-rows','1fr','important');
  root.style.setProperty('align-items','stretch','important');
  root.style.setProperty('width','100%','important');
  root.style.setProperty('min-height','100vh','important');
  oldAside?.remove();
- const aside=document.createElement('aside');aside.className='ls-app-sidebar';
- aside.style.setProperty('grid-column','1','important');
- aside.style.setProperty('grid-row','1','important');
- aside.style.setProperty('width','270px','important');
- aside.style.setProperty('min-width','270px','important');
- aside.style.setProperty('height','100vh','important');
- aside.style.setProperty('position','sticky','important');
- aside.style.setProperty('top','0','important');
- aside.innerHTML='<div class="ls-sidebar-inner"><div class="ls-brand-block"><div class="ls-logo-mark">LS</div><div><div class="ls-brand">LS CUSTOM</div><div class="ls-subbrand">REDSIDE RP · MANAGEMENT</div></div></div><nav class="ls-sidebar-nav">'+links.map(([href,icon,label])=>{const p=perms[href],limited=!access?.isAdmin&&(!access?.permissions||access.permissions.length===0);if(limited&&href==='/messagerie')return '';if(p==='developer'&&!access?.isAdmin)return '';if(p&&p!=='developer'&&!access?.isAdmin&&!access?.permissions?.includes(p)&&!access?.permissions?.includes('all'))return '';return '<a href="'+href+'" class="'+(path===href?'is-active':'')+'"><span class="nav-icon">'+icon+'</span><span>'+label+'</span></a>'}).join('')+'</nav><button id="logout" type="button">Déconnexion</button></div>';
- root.prepend(aside);
- // Compact tablet mode keeps the full navigation accessible through icon tooltips.
- aside.querySelectorAll('.ls-sidebar-nav a').forEach(a=>{
-   const label=a.querySelector('span:not(.nav-icon)')?.textContent?.trim();
-   if(label)a.setAttribute('aria-label',label),a.setAttribute('title',label);
- });
  const mobileLinks=links.map(([href,icon,label])=>{const p=perms[href],limited=!access?.isAdmin&&(!access?.permissions||access.permissions.length===0);if(limited&&href==='/messagerie')return '';if(p==='developer'&&!access?.isAdmin)return '';if(p&&p!=='developer'&&!access?.isAdmin&&!access?.permissions?.includes(p)&&!access?.permissions?.includes('all'))return '';return {href,icon,label,active:path===href}}).filter(Boolean);
  const dock=document.createElement('nav');dock.className='ls-mobile-dock';dock.setAttribute('aria-label','Navigation mobile');
  const primary=mobileLinks.slice(0,3);
@@ -40,7 +25,7 @@ function shell(access,user){
  document.body.appendChild(sheet);
  const more=dock.querySelector('#lsMobileMore');const closeMobile=()=>sheet.classList.remove('is-open');more.onclick=()=>sheet.classList.toggle('is-open');sheet.addEventListener('click',e=>{if(e.target===sheet)closeMobile()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMobile()});
  const main=root.querySelector(':scope > main');if(!main)return;
- main.style.setProperty('grid-column','2','important');
+ main.style.setProperty('grid-column','1','important');
  main.style.setProperty('grid-row','1','important');
  main.style.setProperty('min-width','0','important');
  main.style.setProperty('width','auto','important');
@@ -48,24 +33,10 @@ function shell(access,user){
  main.style.setProperty('padding','0 40px 70px','important');
  main.style.setProperty('display','block','important');
  main.querySelector(':scope > .ls-topbar')?.remove();
- const mobileToggle=document.createElement('button');
- mobileToggle.type='button';mobileToggle.className='ls-mobile-sidebar-toggle';mobileToggle.id='lsMobileSidebarToggle';
- mobileToggle.setAttribute('aria-label','Ouvrir la navigation');mobileToggle.setAttribute('aria-expanded','false');
- mobileToggle.innerHTML='<span></span><span></span><span></span>';
- aside.prepend(mobileToggle);
- const sidebarBackdrop=document.createElement('div');sidebarBackdrop.className='ls-sidebar-backdrop';sidebarBackdrop.setAttribute('aria-hidden','true');
- document.body.appendChild(sidebarBackdrop);
- const closeSidebar=()=>{aside.classList.remove('is-mobile-open');sidebarBackdrop.classList.remove('is-visible');mobileToggle.classList.remove('is-open');mobileToggle.setAttribute('aria-expanded','false');document.body.classList.remove('ls-sidebar-lock')};
- const openSidebar=()=>{aside.classList.add('is-mobile-open');sidebarBackdrop.classList.add('is-visible');mobileToggle.classList.add('is-open');mobileToggle.setAttribute('aria-expanded','true');document.body.classList.add('ls-sidebar-lock')};
- mobileToggle.onclick=()=>aside.classList.contains('is-mobile-open')?closeSidebar():openSidebar();
- sidebarBackdrop.onclick=closeSidebar;
- aside.querySelectorAll('.ls-sidebar-nav a').forEach(a=>a.addEventListener('click',closeSidebar));
- document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSidebar()});
- const avatar=user.avatar_url||user.avatar||'',name=user.global_name||user.display_name||user.username||'Utilisateur',role=(access.roles||[]).map(r=>r.name||r.key).filter(Boolean).join(' · ')||'Membre LS Custom';
+  const avatar=user.avatar_url||user.avatar||'',name=user.global_name||user.display_name||user.username||'Utilisateur',role=(access.roles||[]).map(r=>r.name||r.key).filter(Boolean).join(' · ')||'Membre LS Custom';
  const top=document.createElement('div');top.className='ls-topbar';
- top.innerHTML='<div class="ls-context"><button type="button" class="ls-mobile-sidebar-top" id="lsMobileSidebarTop" aria-label="Ouvrir la sidebar">☰</button><span class="ls-context-page">'+esc(document.title.replace('LS CUSTOM — ','').replace('LS CUSTOM • ',''))+'</span><span class="ls-context-clock" id="lsClock">--:--</span></div><div class="ls-profile-wrap"><button class="ls-profile-trigger" id="profileTrigger" type="button" aria-expanded="false" aria-label="Profil utilisateur">'+(avatar?'<img src="'+esc(avatar)+'" alt="">':'<span>'+esc(name.slice(0,1).toUpperCase())+'</span>')+'</button><div class="ls-profile-overlay" id="profileOverlay" hidden><div class="ls-profile-menu" id="profileMenu" role="dialog" aria-modal="true"><div class="ls-profile-head">'+(avatar?'<img class="ls-profile-photo" src="'+esc(avatar)+'" alt="">':'<div class="ls-profile-photo ls-profile-fallback">'+esc(name.slice(0,1).toUpperCase())+'</div>')+'<div><strong>'+esc(name)+'</strong><small>'+esc(user.username||'')+'</small></div></div><div class="ls-profile-details"><div><span>Nom / prénom</span><b>'+esc(name)+'</b></div><div><span>Rôle</span><b>'+esc(role)+'</b></div><div><span>Discord</span><b>'+esc(user.username||'—')+'</b></div></div><button class="ls-profile-logout" id="profileLogout" type="button">Déconnexion</button></div></div>';
+ top.innerHTML='<div class="ls-context"><span class="ls-context-page">'+esc(document.title.replace('LS CUSTOM — ','').replace('LS CUSTOM • ',''))+'</span><span class="ls-context-clock" id="lsClock">--:--</span></div><div class="ls-profile-wrap"><button class="ls-profile-trigger" id="profileTrigger" type="button" aria-expanded="false" aria-label="Profil utilisateur">'+(avatar?'<img src="'+esc(avatar)+'" alt="">':'<span>'+esc(name.slice(0,1).toUpperCase())+'</span>')+'</button><div class="ls-profile-overlay" id="profileOverlay" hidden><div class="ls-profile-menu" id="profileMenu" role="dialog" aria-modal="true"><div class="ls-profile-head">'+(avatar?'<img class="ls-profile-photo" src="'+esc(avatar)+'" alt="">':'<div class="ls-profile-photo ls-profile-fallback">'+esc(name.slice(0,1).toUpperCase())+'</div>')+'<div><strong>'+esc(name)+'</strong><small>'+esc(user.username||'')+'</small></div></div><div class="ls-profile-details"><div><span>Nom / prénom</span><b>'+esc(name)+'</b></div><div><span>Rôle</span><b>'+esc(role)+'</b></div><div><span>Discord</span><b>'+esc(user.username||'—')+'</b></div></div><button class="ls-profile-logout" id="profileLogout" type="button">Déconnexion</button></div></div>';
  main.prepend(top);
- const topSidebarButton=top.querySelector('#lsMobileSidebarTop');topSidebarButton.onclick=openSidebar;
  const clock=top.querySelector('#lsClock');const tick=()=>{if(clock)clock.textContent=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})};tick();setInterval(tick,30000);document.querySelectorAll('a[href^="/"]:not([target="_blank"])').forEach(a=>a.addEventListener('click',()=>{const p=document.querySelector('.ls-page-progress');if(p){p.style.opacity='1';p.style.width='35%'}}));
  const trigger=top.querySelector('#profileTrigger'),overlay=top.querySelector('#profileOverlay'),menu=top.querySelector('#profileMenu');
  const close=()=>{if(overlay.hasAttribute('hidden'))return;overlay.classList.remove('is-open');trigger.setAttribute('aria-expanded','false');setTimeout(()=>{if(!overlay.classList.contains('is-open'))overlay.setAttribute('hidden','')},170)};
