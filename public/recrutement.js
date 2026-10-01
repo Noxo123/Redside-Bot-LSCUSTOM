@@ -22,7 +22,7 @@ function renderHistory(){
 }
 
 function render(){
- const rows=state.rows||[];
+ const rows=(state.rows||[]).slice().sort((a,b)=>(Number(b.montant_personnalisations)||0)-(Number(a.montant_personnalisations)||0);
  const totals=['appels','reparations','fourrieres','personnalisations','factures','montant_fourrieres','montant_personnalisations','montant_factures'].reduce((o,k)=>{o[k]=rows.reduce((n,x)=>n+(Number(x[k])||0),0);return o},{});
  const totalActions=totals.appels+totals.reparations+totals.fourrieres+totals.personnalisations+totals.factures;
  const guildId=state.access?.guildId||'';
