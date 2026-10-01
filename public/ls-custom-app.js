@@ -4,6 +4,7 @@ const links=[['/dashboard','⌂','Tableau de bord'],['/equipe','♙','Équipe'],
 const perms={'/equipe':'team','/partenariats':'partnerships','/developpeur':'developer'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function shell(access,user){
+ document.body.classList.add('ls-motion-ready');
  const oldAside=document.querySelector('body > div > aside'),root=oldAside?.parentElement;if(!root)return;
  root.classList.add('ls-shell');
  /* Force the shared application shell to be a real desktop 2-column layout.
@@ -25,6 +26,11 @@ function shell(access,user){
  aside.style.setProperty('top','0','important');
  aside.innerHTML='<div class="ls-sidebar-inner"><div class="ls-brand-block"><div class="ls-logo-mark">LS</div><div><div class="ls-brand">LS CUSTOM</div><div class="ls-subbrand">REDSIDE RP · MANAGEMENT</div></div></div><nav class="ls-sidebar-nav">'+links.map(([href,icon,label])=>{const p=perms[href],limited=!access?.isAdmin&&(!access?.permissions||access.permissions.length===0);if(limited&&href==='/messagerie')return '';if(p==='developer'&&!access?.isAdmin)return '';if(p&&p!=='developer'&&!access?.isAdmin&&!access?.permissions?.includes(p)&&!access?.permissions?.includes('all'))return '';return '<a href="'+href+'" class="'+(path===href?'is-active':'')+'"><span class="nav-icon">'+icon+'</span><span>'+label+'</span></a>'}).join('')+'</nav><button id="logout" type="button">Déconnexion</button></div>';
  root.prepend(aside);
+ // Compact tablet mode keeps the full navigation accessible through icon tooltips.
+ aside.querySelectorAll('.ls-sidebar-nav a').forEach(a=>{
+   const label=a.querySelector('span:not(.nav-icon)')?.textContent?.trim();
+   if(label)a.setAttribute('aria-label',label),a.setAttribute('title',label);
+ });
  const mobileLinks=links.map(([href,icon,label])=>{const p=perms[href],limited=!access?.isAdmin&&(!access?.permissions||access.permissions.length===0);if(limited&&href==='/messagerie')return '';if(p==='developer'&&!access?.isAdmin)return '';if(p&&p!=='developer'&&!access?.isAdmin&&!access?.permissions?.includes(p)&&!access?.permissions?.includes('all'))return '';return {href,icon,label,active:path===href}}).filter(Boolean);
  const dock=document.createElement('nav');dock.className='ls-mobile-dock';dock.setAttribute('aria-label','Navigation mobile');
  const primary=mobileLinks.slice(0,3);
