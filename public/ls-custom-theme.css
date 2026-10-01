@@ -350,7 +350,7 @@ textarea{max-width:100%}
   .ls-mobile-dock .dock-icon{font-size:17px;line-height:1}
   .ls-mobile-dock a.is-active{color:var(--gold);background:rgba(212,160,23,.09)}
   .ls-mobile-dock button:active,.ls-mobile-dock a:active{transform:scale(.94);background:rgba(255,255,255,.05)}
-  .ls-mobile-menu{position:fixed;inset:0;z-index:7999;background:rgba(0,0,0,.52);backdrop-filter:blur(8px);padding:0 12px calc(84px + env(safe-area-inset-bottom);align-items:flex-end;justify-content:center}
+  .ls-mobile-menu{position:fixed;inset:0;z-index:7999;background:rgba(0,0,0,.52);backdrop-filter:blur(8px);padding:0 12px calc(84px + env(safe-area-inset-bottom));align-items:flex-end;justify-content:center}
   .ls-mobile-menu.is-open{display:flex}
   .ls-mobile-menu-panel{width:min(520px,100%);max-height:78svh;overflow:auto;background:#111316;border:1px solid rgba(255,255,255,.1);border-radius:20px 20px 12px 12px;padding:12px;margin-bottom:4px;box-shadow:0 30px 90px rgba(0,0,0,.7);transform:translateY(24px);opacity:0;transition:.24s cubic-bezier(.2,.8,.2,1)}
   .ls-mobile-menu.is-open .ls-mobile-menu-panel{transform:none;opacity:1}
