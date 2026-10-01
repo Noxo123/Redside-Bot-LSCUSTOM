@@ -5,7 +5,7 @@ const perms={'/equipe':'team','/partenariats':'partnerships','/developpeur':'dev
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function shell(access,user){
  document.body.classList.add('ls-motion-ready');
- const oldAside=document.querySelector('body > div > aside'),root=oldAside?.parentElement;if(!root)return;
+ const oldAside=document.querySelector('body > div > aside'),root=oldAside?.parentElement||document.querySelector('body > div.min-h-screen')||document.querySelector('body > div');if(!root)return;
  root.classList.add('ls-shell');
  /* Force the shared application shell to be a real desktop 2-column layout.
     Some page-local CSS rules are loaded after the theme, so use inline !important styles here. */
@@ -15,7 +15,7 @@ function shell(access,user){
  root.style.setProperty('align-items','stretch','important');
  root.style.setProperty('width','100%','important');
  root.style.setProperty('min-height','100vh','important');
- oldAside?.remove();
+ oldAside?.remove();document.querySelectorAll('.ls-app-sidebar,body > div > aside').forEach(e=>e.remove());
  const mobileLinks=links.map(([href,icon,label])=>{const p=perms[href],limited=!access?.isAdmin&&(!access?.permissions||access.permissions.length===0);if(limited&&href==='/messagerie')return '';if(p==='developer'&&!access?.isAdmin)return '';if(p&&p!=='developer'&&!access?.isAdmin&&!access?.permissions?.includes(p)&&!access?.permissions?.includes('all'))return '';return {href,icon,label,active:path===href}}).filter(Boolean);
  const dock=document.createElement('nav');dock.className='ls-mobile-dock';dock.setAttribute('aria-label','Navigation mobile');
  const primary=mobileLinks.slice(0,3);
