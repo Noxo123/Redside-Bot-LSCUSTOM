@@ -91,13 +91,14 @@ app.get('/uploads/:name',(req,res)=>{
 });
 const sessionSecret=process.env.SESSION_SECRET||(process.env.NODE_ENV==='production'?crypto.randomBytes(48).toString('hex'):'dev-secret-local');
 if(process.env.NODE_ENV==='production'&&!process.env.SESSION_SECRET)console.warn('⚠️ SESSION_SECRET absent : un redémarrage invalidera les sessions existantes. Configure SESSION_SECRET.');
-app.use(session({name:'__Host-lscustom',secret:sessionSecret,store:sessionStore,resave:false,saveUninitialized:false,cookie:{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:7*86400000}}));
+app.use(session({name:process.env.NODE_ENV==='production'?'__Host-lscustom':'lscustom.sid',secret:sessionSecret,store:sessionStore,resave:false,saveUninitialized:false,cookie:{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:7*86400000}}));
 app.use((req,res,next)=>{
   res.setHeader('X-Content-Type-Options','nosniff');
   res.setHeader('X-Frame-Options','SAMEORIGIN');
-  res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
+  res.setHeader('Referrer-Policy','no-referrer');
   res.setHeader('Permissions-Policy','camera=(),microphone=(),geolocation=()');
   res.setHeader('Cross-Origin-Opener-Policy','same-origin');
+  if(req.path.startsWith('/auth/')||req.path.startsWith('/api/session')||req.path.startsWith('/api/auth/'))res.setHeader('Cache-Control','no-store');
   if(process.env.NODE_ENV==='production')res.setHeader('Strict-Transport-Security','max-age=31536000; includeSubDomains');
   if(['POST','PUT','PATCH','DELETE'].includes(req.method)){
     const origin=req.get('origin');
