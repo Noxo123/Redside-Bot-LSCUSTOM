@@ -41,5 +41,5 @@ async function send(type,id,subject,body){if(!String(subject).trim()||!String(bo
 $('#reply').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget;try{await send(f.dataset.type,f.dataset.id,$('#replySubject').value,$('#replyBody').value);$('#replyBody').value='';toast('Réponse envoyée.');openThread(encodeURIComponent(selected))}catch(err){toast(err.message,true)}});
 init().catch(e=>{console.error(e);location.href='/connexion'});
 </script>
-<script src="/ls-custom-app.js?v=20261002-4"></script>
+<script src="/ls-custom-app.js?v=20261002-5"></script>
 </body></html>
