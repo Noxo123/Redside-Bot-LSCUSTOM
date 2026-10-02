@@ -27,10 +27,11 @@ const partnershipFileDir=path.join(uploadDir,'partnership-files');
 fs.mkdirSync(uploadDir,{recursive:true});
 fs.mkdirSync(paymentProofDir,{recursive:true});
 fs.mkdirSync(partnershipFileDir,{recursive:true});
+const publicUploadExt={ 'image/png':'.png','image/jpeg':'.jpg','image/webp':'.webp','image/gif':'.gif','application/pdf':'.pdf' };
 const upload=multer({
- storage:multer.diskStorage({destination:uploadDir,filename:(req,file,cb)=>cb(null,Date.now()+'-'+crypto.randomUUID()+path.extname(file.originalname).toLowerCase())}),
- limits:{fileSize:8*1024*1024},
- fileFilter:(req,file,cb)=>cb(null,/^(image\/(png|jpe?g|webp|gif)|application\/pdf)$/.test(file.mimetype))
+ storage:multer.diskStorage({destination:uploadDir,filename:(req,file,cb)=>cb(null,Date.now()+'-'+crypto.randomUUID()+(publicUploadExt[file.mimetype]||'.bin'))}),
+ limits:{fileSize:8*1024*1024,files:5,fields:30},
+ fileFilter:(req,file,cb)=>cb(null,Object.prototype.hasOwnProperty.call(publicUploadExt,file.mimetype))
 });
 const paymentProofUpload=multer({
  storage:multer.diskStorage({
