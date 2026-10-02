@@ -27,12 +27,12 @@ const mobileLinks=links.map(([href,icon,label])=>{const p=perms[href],limited=!a
  document.body.appendChild(sheet);
  const more=dock.querySelector('#lsMobileMore');const closeMobile=()=>sheet.classList.remove('is-open');more.onclick=()=>sheet.classList.toggle('is-open');sheet.addEventListener('click',e=>{if(e.target===sheet)closeMobile()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMobile()});
  const main=root.querySelector(':scope > main');if(!main)return;
- main.style.setProperty('grid-column','1','important');
+ main.style.setProperty('grid-column',window.matchMedia('(max-width:900px)').matches?'1':'2','important');
  main.style.setProperty('grid-row','1','important');
  main.style.setProperty('min-width','0','important');
  main.style.setProperty('width','auto','important');
  main.style.setProperty('margin','0','important');
- main.style.setProperty('padding','0 40px 70px','important');
+ main.style.setProperty('padding',window.matchMedia('(max-width:900px)').matches?'0 14px 100px':'0 40px 70px','important');
  main.style.setProperty('display','block','important');
  main.querySelector(':scope > .ls-topbar')?.remove();
   const avatar=user.avatar_url||user.avatar||'',name=user.global_name||user.display_name||user.username||'Utilisateur',role=(access.roles||[]).map(r=>r.name||r.key).filter(Boolean).join(' · ')||'Membre LS Custom';
