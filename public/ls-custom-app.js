@@ -10,13 +10,15 @@ function shell(access,user){
  /* Force the shared application shell to be a real desktop 2-column layout.
     Some page-local CSS rules are loaded after the theme, so use inline !important styles here. */
  root.style.setProperty('display','grid','important');
- root.style.setProperty('grid-template-columns','minmax(0,1fr)','important');
+ root.style.setProperty('grid-template-columns','270px minmax(0,1fr)','important');
  root.style.setProperty('grid-template-rows','1fr','important');
  root.style.setProperty('align-items','stretch','important');
  root.style.setProperty('width','100%','important');
  root.style.setProperty('min-height','100vh','important');
  oldAsides.forEach(e=>e.remove());document.querySelectorAll('.ls-app-sidebar,body > div > aside').forEach(e=>e.remove());
- const mobileLinks=links.map(([href,icon,label])=>{const p=perms[href],limited=!access?.isAdmin&&(!access?.permissions||access.permissions.length===0);if(limited&&href==='/messagerie')return '';if(p==='developer'&&!access?.isAdmin)return '';if(p&&p!=='developer'&&!access?.isAdmin&&!access?.permissions?.includes(p)&&!access?.permissions?.includes('all'))return '';return {href,icon,label,active:path===href}}).filter(Boolean);
+ const sidebar=document.createElement('aside');sidebar.className='ls-app-sidebar';sidebar.setAttribute('aria-label','Navigation principale');sidebar.innerHTML='<div class="ls-sidebar-brand"><div class="ls-sidebar-logo">LS</div><div><strong>LS CUSTOM</strong><small>Centre de gestion</small></div></div><nav class="ls-sidebar-nav">'+links.map(([href,icon,label])=>{const p=perms[href],limited=!access?.isAdmin&&(!access?.permissions||access.permissions.length===0);if(limited&&href==='/messagerie')return '';if(p==='developer'&&!access?.isAdmin)return '';if(p&&p!=='developer'&&!access?.isAdmin&&!access?.permissions?.includes(p)&&!access?.permissions?.includes('all'))return '';return '<a href="'+href+'" class="'+(path===href?'is-active':'')+'"><span class="dock-icon">'+icon+'</span><span>'+esc(label)+'</span></a>'}).join('')+'</nav><div class="ls-sidebar-user"><div class="ls-sidebar-user-dot"></div><div><strong>'+esc(user.global_name||user.display_name||user.username||'Utilisateur')+'</strong><small>'+esc((access.roles||[]).map(r=>r.name||r.key).filter(Boolean).join(' · ')||'Membre LS Custom')+'</small></div></div>';
+root.insertBefore(sidebar,root.querySelector(':scope > main'));
+const mobileLinks=links.map(([href,icon,label])=>{const p=perms[href],limited=!access?.isAdmin&&(!access?.permissions||access.permissions.length===0);if(limited&&href==='/messagerie')return '';if(p==='developer'&&!access?.isAdmin)return '';if(p&&p!=='developer'&&!access?.isAdmin&&!access?.permissions?.includes(p)&&!access?.permissions?.includes('all'))return '';return {href,icon,label,active:path===href}}).filter(Boolean);
  const dock=document.createElement('nav');dock.className='ls-mobile-dock';dock.setAttribute('aria-label','Navigation mobile');
  const primary=mobileLinks.slice(0,3);
  dock.innerHTML=primary.map(x=>'<a href="'+x.href+'" class="'+(x.active?'is-active':'')+'"><span class="dock-icon">'+x.icon+'</span><span>'+esc(x.label)+'</span></a>').join('')+'<button type="button" id="lsMobileMore" aria-label="Ouvrir le menu"><span class="dock-icon">☰</span><span>Menu</span></button>';
