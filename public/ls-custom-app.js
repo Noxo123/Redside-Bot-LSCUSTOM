@@ -1,6 +1,6 @@
 (()=>{const path=location.pathname;const publicPage=['/connexion','/','/podium'].includes(path)||path.startsWith('/recrutement/');if(publicPage)return;
 const api=async(u,o)=>{const r=await fetch(u,o);const d=await r.json().catch(()=>({}));if((r.status===401||r.status===403)&&location.pathname!=='/connexion'){location.replace('/connexion');throw Error('Session expirée');}if(!r.ok)throw Error(d.error||'Erreur');return d};
-const links=[['/dashboard','⌂','Tableau de bord'],['/equipe','♙','Équipe'],['/activite','▦','Activité & quotas'],['/agenda','□','Agenda RH'],['/annonces','◉','Annonces'],['/messagerie','✉','Messagerie'],['/partenariats','◇','Partenariats'],['/developpeur','⚙','Développeur']];
+const links=[['/dashboard','⌂','LS CUSTOM — Tableau de bord'],['/equipe','♙','LS CUSTOM — Équipe'],['/activite','▦','LS CUSTOM — Activité & quotas'],['/agenda','□','LS CUSTOM — Agenda RH'],['/annonces','◉','LS CUSTOM — Annonces'],['/messagerie','✉','LS CUSTOM — Messagerie'],['/partenariats','◇','LS CUSTOM — Partenariats'],['/developpeur','⚙','LS CUSTOM — Développeur']];
 const perms={'/equipe':'team','/partenariats':'partnerships','/developpeur':'developer'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function shell(access,user){
