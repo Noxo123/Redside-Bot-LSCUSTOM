@@ -5,7 +5,7 @@ const perms={'/equipe':'team','/partenariats':'partnerships','/developpeur':'dev
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function shell(access,user){
  document.body.classList.add('ls-motion-ready');
- const oldAsides=[...document.querySelectorAll('body aside')],oldAside=oldAsides[0],root=oldAside?.parentElement||document.querySelector('body > div.min-h-screen')||document.querySelector('body > div');if(!root)return;
+ const root=document.querySelector('body > .ls-shell')||document.querySelector('body > div.min-h-screen')||document.querySelector('body > div');if(!root)return;const oldAsides=[...root.children].filter(e=>e.tagName==='ASIDE');
  root.classList.add('ls-shell');
  /* Force the shared application shell to be a real desktop 2-column layout.
     Some page-local CSS rules are loaded after the theme, so use inline !important styles here. */
