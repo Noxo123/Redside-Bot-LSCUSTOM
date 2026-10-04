@@ -91,17 +91,18 @@ async function main(){
   document.querySelectorAll('[data-permission]').forEach(a=>{if(!(access.isAdmin||access.permissions.includes(a.dataset.permission)||access.permissions.includes('all')))a.remove()});
   if(access.isAdmin)$('#developerNav').classList.remove('hidden');
   $('#logout').onclick=async()=>{await api('/auth/player/logout',{method:'POST'});location.href='/connexion'};
-  const [start,end]=week();
+  const fallback=week();
+  const overview=await api('/api/employee/overview');
+  const start=overview.period_start||fallback[0],end=overview.period_end||fallback[1];
   const periodEl=$('#periodLabel'); if(periodEl) periodEl.textContent=start+' → '+end;
   if(limited){
-   const overview=await api('/api/employee/overview');
    const activity=await api('/api/employee/activity?start='+start+'&end='+end);
    renderLimited(Array.isArray(activity?.rows)?activity.rows[0]:null,overview);
    const refreshEl=$('#refreshLabel'); if(refreshEl) refreshEl.textContent='Mis à jour à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
    return;
   }
   const results=await Promise.all([
-   api('/api/employee/overview'),
+   Promise.resolve(overview),
    api('/api/employee/activity?start='+start+'&end='+end),
    (access.isAdmin||access.permissions.includes('team')||access.permissions.includes('all'))?api('/api/employee/team'):Promise.resolve([]),
    (access.isAdmin||access.permissions.includes('partnerships')||access.permissions.includes('all'))?api('/api/employee/partnerships'):Promise.resolve([]),
