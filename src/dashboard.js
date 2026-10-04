@@ -100,7 +100,7 @@ app.use((req,res,next)=>{
   res.setHeader('Referrer-Policy','no-referrer');
   res.setHeader('Permissions-Policy','camera=(),microphone=(),geolocation=()');
   res.setHeader('Cross-Origin-Opener-Policy','same-origin');
-  if(req.path.startsWith('/auth/')||req.path.startsWith('/api/session')||req.path.startsWith('/api/auth/'))res.setHeader('Cache-Control','no-store');
+  if(req.path.startsWith('/auth/')||req.path.startsWith('/api/')){res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');res.setHeader('Pragma','no-cache');res.setHeader('Expires','0')}
   if(process.env.NODE_ENV==='production')res.setHeader('Strict-Transport-Security','max-age=31536000; includeSubDomains');
   if(['POST','PUT','PATCH','DELETE'].includes(req.method)){
     const origin=req.get('origin');
