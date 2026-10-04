@@ -136,34 +136,40 @@ app.post('/api/developer/impersonation/start/:id',playerAuth,async(req,res)=>{
   if(req.session.impersonation)return res.status(409).json({error:'Une session utilisateur est déjà ouverte.'});
   const g=req.session.player.guildId,id=Number(req.params.id),employee=getEmployees(g).find(e=>Number(e.id)===id);
   if(!employee)return res.status(404).json({error:'Utilisateur introuvable.'});
-  const requestedUid=clean(req.body?.user_id,30);
-  if(requestedUid&&!/^\d{17,20}$/.test(requestedUid))return res.status(400).json({error:'ID Discord invalide.'});
-  let uid=requestedUid||(/^\d{17,20}$/.test(String(employee.user_id||''))?String(employee.user_id):'');
-  const guild=client.guilds.cache.get(g)||await client.guilds.fetch(g).catch(()=>null);
-  if(!guild)return res.status(404).json({error:'Serveur Discord introuvable.'});
-  let member=null;
-  if(uid) member=await guild.members.fetch(uid).catch(()=>null);
-  if(requestedUid&&!member)return res.status(404).json({error:'Le membre Discord sélectionné est introuvable sur le serveur.'});
-  if(requestedUid&&member?.user?.bot)return res.status(400).json({error:'Un bot Discord ne peut pas être utilisé pour une session utilisateur.'});
-  if(requestedUid&&member){
-   try{linkEmployeeDiscord({id,guildId:g,userId:uid,username:member.user.username,displayName:member.displayName||member.user.globalName||member.user.username})}catch(e){return res.status(400).json({error:e.message||'Impossible de lier ce compte Discord.'})}
-  }
-  if(!member){
-   let members;
-   try{members=await guild.members.fetch()}catch(e){members=guild.members.cache}
-   const norm=v=>String(v||'').trim().toLocaleLowerCase('fr-FR').replace(/\\s+/g,' ');
-   const names=[employee.display_name,employee.username,employee.discord_username].map(norm).filter(Boolean);
-   const matches=[...members.values()].filter(m=>m&&!m.user?.bot).filter(m=>{const vals=[m.displayName,m.user.globalName,m.user.username].map(norm);return names.some(n=>vals.includes(n))});
-   if(matches.length===1){member=matches[0];uid=member.id;try{linkEmployeeDiscord({id,guildId:g,userId:uid,username:member.user.username,displayName:member.displayName||member.user.globalName||member.user.username})}catch(e){console.warn('Liaison Discord automatique avant impersonation:',e.message)}}
-  }
-  if(!member||!uid)return res.status(400).json({error:'Compte non synchronisé : aucun membre Discord ne correspond automatiquement à ce profil. Utilise « Lier Discord » dans Joueurs RP.'});
-  const access=await getMemberAccess(g,uid);
-  if(!access||!access.employee)return res.status(403).json({error:'Impossible de charger la session de cet utilisateur.'});
+
+  // Mode développeur : l'impersonation repose sur le profil RH local.
+  // Aucun compte Discord n'est requis, recherché, lié ou modifié.
+  const targetId=String(employee.user_id||'').startsWith('demo:')||String(employee.user_id||'').startsWith('impersonate:')
+    ? String(employee.user_id)
+    : (String(employee.user_id||'').trim()||`impersonate:${employee.id}`);
+
   const original={...req.session.player};
-  req.session.impersonation={originalPlayer:original,developerId:original.id,targetId:uid,targetEmployeeId:employee.id,startedAt:Date.now()};
-  req.session.player={id:uid,username:access.username||employee.username||'',global_name:access.displayName||employee.display_name||employee.username||'Utilisateur',avatar:access.avatar||null,guildId:g,login:'developer-impersonation',impersonated:true};
-  req.session.save(err=>{if(err)return res.status(500).json({error:'Impossible d’enregistrer la session utilisateur.'});audit(g,original.id,'developer.impersonation.started',JSON.stringify({employeeId:employee.id,targetId:uid}));res.json({ok:true,redirect:'/dashboard',user:{id:uid,display_name:employee.display_name}})});
- }catch(e){console.error('Démarrage impersonation:',e);res.status(500).json({error:'Impossible d’ouvrir la session utilisateur.'})}
+  req.session.impersonation={
+    originalPlayer:original,
+    developerId:original.id,
+    targetId,
+    targetEmployeeId:employee.id,
+    startedAt:Date.now(),
+    developerOnly:true
+  };
+  req.session.player={
+    id:targetId,
+    username:employee.username||'',
+    global_name:employee.display_name||employee.username||'Utilisateur',
+    avatar:null,
+    guildId:g,
+    login:'developer-impersonation',
+    impersonated:true
+  };
+  req.session.save(err=>{
+    if(err)return res.status(500).json({error:'Impossible d’enregistrer la session utilisateur.'});
+    audit(g,original.id,'developer.impersonation.started',JSON.stringify({employeeId:employee.id,targetId,discordLinked:false}));
+    res.json({ok:true,redirect:'/dashboard',user:{id:targetId,display_name:employee.display_name}});
+  });
+ }catch(e){
+  console.error('Démarrage impersonation:',e);
+  res.status(500).json({error:'Impossible d’ouvrir la session utilisateur.'});
+ }
 });
 app.post('/api/developer/impersonation/stop',playerAuth,async(req,res)=>{
  try{
