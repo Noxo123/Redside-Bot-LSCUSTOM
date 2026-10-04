@@ -1209,3 +1209,5 @@ body:has(#quotaFollowupList) .quota-followup-row:hover{
   border-color:rgba(212,160,23,.16)!important;
   transform:translateX(2px);
 }
+
+.ls-impersonation-bar{position:fixed;left:270px;right:0;top:0;z-index:9999;display:flex;align-items:center;justify-content:center;gap:18px;min-height:42px;padding:8px 16px;background:rgba(58,20,90,.96);border-bottom:1px solid rgba(168,85,247,.45);color:#f3e8ff;font-size:12px;backdrop-filter:blur(14px)}.ls-impersonation-bar button{border:1px solid rgba(216,180,254,.35);border-radius:9px;background:rgba(255,255,255,.08);padding:6px 11px;color:#fff;font-weight:700;cursor:pointer}.ls-impersonation-bar button:hover{background:rgba(255,255,255,.14)}@media(max-width:900px){.ls-impersonation-bar{left:0;right:0;bottom:0;top:auto;min-height:52px;justify-content:space-between;font-size:11px;padding:8px 12px}.ls-impersonation-bar span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
