@@ -892,3 +892,307 @@ body .ls-context-clock{font:600 10px 'JetBrains Mono',monospace!important;color:
 @media(prefers-reduced-motion:reduce){
   .ls-sidebar-nav a{transition:none!important}
 }
+
+
+/* ============================================================
+   LS CUSTOM OS — PILOTAGE V2
+   Dedicated control-center styling. Scoped to /pilotage.
+   ============================================================ */
+body:has(#kpis) .ls-shell>main{
+  padding:0 40px 80px!important;
+  background:
+    radial-gradient(circle at 76% -8%,rgba(212,160,23,.075),transparent 32%),
+    linear-gradient(180deg,rgba(255,255,255,.012),transparent 260px);
+}
+body:has(#kpis) .ls-shell>main>div{
+  max-width:1680px!important;
+  padding-top:0!important;
+}
+body:has(#kpis) .ls-shell>main>div>header{
+  position:relative;
+  margin:0 0 22px!important;
+  padding:34px 2px 24px!important;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+body:has(#kpis) header:before{
+  content:'CONTROL / 01';
+  display:block;
+  margin-bottom:8px;
+  color:#5d5953;
+  font:700 9px/1 'JetBrains Mono',monospace;
+  letter-spacing:2px;
+}
+body:has(#kpis) header p:first-child{
+  color:#d4a017!important;
+  font:700 10px/1 'JetBrains Mono',monospace!important;
+  letter-spacing:2px!important;
+}
+body:has(#kpis) header h1{
+  margin-top:7px!important;
+  font-size:clamp(34px,4vw,54px)!important;
+  letter-spacing:1px!important;
+  line-height:.95!important;
+}
+body:has(#kpis) header p.mt-2{
+  max-width:680px;
+  color:#77736e!important;
+  font-size:13px!important;
+}
+body:has(#kpis) header .flex.gap-2{
+  align-items:center;
+}
+body:has(#kpis) header button{
+  min-height:42px;
+  border-radius:9px!important;
+  padding:0 15px!important;
+  font-size:11px!important;
+  font-weight:800!important;
+  letter-spacing:.5px;
+  transition:.2s ease;
+}
+body:has(#kpis) header button:first-child{
+  border-color:rgba(255,255,255,.09)!important;
+  background:#111113!important;
+  color:#aaa59e!important;
+}
+body:has(#kpis) header button:first-child:hover{
+  border-color:rgba(255,255,255,.18)!important;
+  color:#eee!important;
+}
+body:has(#kpis) header button:last-child{
+  background:linear-gradient(135deg,#f5c842,#c58d0e)!important;
+  color:#080808!important;
+  box-shadow:0 8px 25px rgba(212,160,23,.13);
+}
+body:has(#kpis) header button:last-child:hover{
+  transform:translateY(-1px);
+  box-shadow:0 12px 32px rgba(212,160,23,.22);
+}
+body:has(#kpis) #kpis{
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  gap:10px!important;
+  margin-bottom:14px;
+}
+body:has(#kpis) #kpis>div{
+  position:relative;
+  min-height:104px;
+  padding:16px!important;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.065)!important;
+  border-radius:11px!important;
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.025),rgba(255,255,255,.008)),
+    #0d0d0f!important;
+  box-shadow:0 12px 35px rgba(0,0,0,.16);
+}
+body:has(#kpis) #kpis>div:after{
+  content:'';
+  position:absolute;
+  width:70px;height:70px;
+  right:-30px;bottom:-35px;
+  border-radius:50%;
+  background:rgba(212,160,23,.07);
+  filter:blur(2px);
+}
+body:has(#kpis) #kpis>div>div:first-child{
+  color:#625e58!important;
+  font:700 8px/1.2 'JetBrains Mono',monospace!important;
+  letter-spacing:1.5px!important;
+}
+body:has(#kpis) #kpis>div>div:nth-child(2){
+  position:relative;z-index:1;
+  margin-top:13px!important;
+  color:#eee9e0!important;
+  font:700 27px/1 'Bebas Neue',sans-serif!important;
+  letter-spacing:1px!important;
+}
+body:has(#kpis) #kpis>div>div:last-child{
+  margin-top:6px!important;
+  color:#66625d!important;
+  font:500 10px/1 'JetBrains Mono',monospace!important;
+}
+body:has(#kpis) #kpis>div:nth-child(2) div:nth-child(2){
+  color:#f5c842!important;
+}
+body:has(#kpis) section.rounded-2xl{
+  border:1px solid rgba(255,255,255,.065)!important;
+  border-radius:12px!important;
+  background:linear-gradient(145deg,rgba(18,18,21,.96),rgba(10,10,12,.96))!important;
+  box-shadow:0 18px 50px rgba(0,0,0,.16);
+}
+body:has(#kpis) section.rounded-2xl>div>h2,
+body:has(#kpis) section.rounded-2xl>h2{
+  font-size:18px!important;
+  letter-spacing:1px!important;
+}
+body:has(#kpis) section.rounded-2xl>div>p,
+body:has(#kpis) section.rounded-2xl>p{
+  color:#5f5b56!important;
+}
+body:has(#kpis) #ranking{
+  display:grid!important;
+  gap:5px!important;
+}
+body:has(#kpis) #ranking>div{
+  min-height:55px;
+  border:1px solid rgba(255,255,255,.045)!important;
+  border-radius:9px!important;
+  background:rgba(255,255,255,.018)!important;
+  padding:9px 11px!important;
+  transition:.18s ease;
+}
+body:has(#kpis) #ranking>div:hover{
+  background:rgba(212,160,23,.045)!important;
+  border-color:rgba(212,160,23,.14)!important;
+  transform:translateX(2px);
+}
+body:has(#kpis) #ranking>div>span{
+  width:30px!important;
+  font:700 12px 'JetBrains Mono',monospace!important;
+}
+body:has(#kpis) #ranking>div:nth-child(1)>span{
+  color:#f5c842!important;
+}
+body:has(#kpis) #ranking>div:nth-child(2)>span{
+  color:#c4c4c4!important;
+}
+body:has(#kpis) #ranking>div:nth-child(3)>span{
+  color:#b17b4d!important;
+}
+body:has(#kpis) #ranking b{
+  color:#eee8dd!important;
+  font:700 11px 'JetBrains Mono',monospace!important;
+}
+body:has(#kpis) #notifications button{
+  border-color:rgba(255,255,255,.055)!important;
+  border-radius:9px!important;
+  background:rgba(255,255,255,.018)!important;
+  padding:11px!important;
+  transition:.18s ease;
+}
+body:has(#kpis) #notifications button:hover{
+  background:rgba(212,160,23,.045)!important;
+  border-color:rgba(212,160,23,.18)!important;
+}
+body:has(#kpis) #notifications button div:first-child{
+  color:#ddd8cf!important;
+}
+body:has(#kpis) #notifications button div:nth-child(2){
+  color:#77736e!important;
+  line-height:1.45;
+}
+body:has(#kpis) #sanctions>div,
+body:has(#kpis) #badgesList>div,
+body:has(#kpis) #system>div{
+  border-color:rgba(255,255,255,.055)!important;
+  border-radius:9px!important;
+  background:rgba(255,255,255,.018)!important;
+}
+body:has(#kpis) #sanctions>div:hover,
+body:has(#kpis) #badgesList>div:hover{
+  border-color:rgba(212,160,23,.14)!important;
+}
+body:has(#kpis) #badgesList>div{
+  min-height:105px;
+  padding:14px!important;
+}
+body:has(#kpis) #badgesList>div>div:first-child{
+  font-size:25px!important;
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,.35));
+}
+body:has(#kpis) #badgesList>div>div:nth-child(2){
+  color:#ddd8cf!important;
+  font-size:12px!important;
+}
+body:has(#kpis) #badgesList>div>div:last-child{
+  color:#5f5b56!important;
+  margin-top:4px!important;
+}
+body:has(#kpis) #newSanction,
+body:has(#kpis) #security{
+  border-color:rgba(255,255,255,.08)!important;
+  background:#111113!important;
+  color:#a6a19a!important;
+  border-radius:8px!important;
+  font-weight:700;
+  transition:.18s ease;
+}
+body:has(#kpis) #newSanction:hover,
+body:has(#kpis) #security:hover{
+  color:#f5c842!important;
+  border-color:rgba(212,160,23,.24)!important;
+}
+body:has(#kpis) #employees{
+  border:1px solid rgba(255,255,255,.045);
+  border-radius:9px;
+  background:#0b0b0d;
+}
+body:has(#kpis) #employees table{
+  min-width:700px;
+  border-collapse:collapse;
+}
+body:has(#kpis) #employees th{
+  padding:12px!important;
+  background:#101013;
+  color:#55514d!important;
+  font:700 8px 'JetBrains Mono',monospace!important;
+  letter-spacing:1.3px!important;
+  text-transform:uppercase;
+}
+body:has(#kpis) #employees td{
+  padding:12px!important;
+  color:#aaa59e!important;
+  border-top:1px solid rgba(255,255,255,.04)!important;
+}
+body:has(#kpis) #employees tbody tr:hover td{
+  background:rgba(212,160,23,.025)!important;
+}
+body:has(#kpis) #employees td:first-child{
+  color:#e4ded5!important;
+}
+body:has(#kpis) #period{
+  padding:5px 8px;
+  border:1px solid rgba(255,255,255,.05);
+  border-radius:6px;
+  background:rgba(255,255,255,.018);
+  color:#57534e!important;
+  font:600 9px 'JetBrains Mono',monospace!important;
+}
+body:has(#kpis) #audit{
+  border:1px solid rgba(255,255,255,.05);
+  border-radius:9px;
+  background:#0a0a0c;
+}
+body:has(#kpis) #audit>div>div{
+  border-color:rgba(255,255,255,.045)!important;
+  color:#77736e!important;
+}
+body:has(#kpis) #toast{
+  border-color:rgba(212,160,23,.2)!important;
+  background:#101012!important;
+  color:#eee!important;
+  box-shadow:0 18px 55px rgba(0,0,0,.55)!important;
+}
+@media(max-width:1180px){
+  body:has(#kpis) #kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(max-width:900px){
+  body:has(#kpis) .ls-shell>main{padding:0 14px 105px!important}
+  body:has(#kpis) .ls-shell>main>div>header{padding:24px 0 20px!important}
+  body:has(#kpis) header h1{font-size:38px!important}
+  body:has(#kpis) #kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  body:has(#kpis) section.rounded-2xl{padding:15px!important}
+}
+@media(max-width:560px){
+  body:has(#kpis) header{gap:15px!important}
+  body:has(#kpis) header h1{font-size:34px!important}
+  body:has(#kpis) header .flex.gap-2{width:100%;display:grid!important;grid-template-columns:1fr 1fr}
+  body:has(#kpis) header button{width:100%}
+  body:has(#kpis) #kpis{grid-template-columns:1fr 1fr!important;gap:7px!important}
+  body:has(#kpis) #kpis>div{min-height:94px;padding:13px!important}
+  body:has(#kpis) #kpis>div>div:nth-child(2){font-size:23px!important}
+  body:has(#kpis) .grid.xl\\:grid-cols-\\[1\\.5fr_1fr\\]{grid-template-columns:1fr!important}
+}
+@media(prefers-reduced-motion:reduce){
+  body:has(#kpis) *{scroll-behavior:auto!important;transition:none!important}
+}
