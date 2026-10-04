@@ -65,14 +65,46 @@ function render(){
   '<td class="quota-num">'+totals.factures+'</td>'+
   '<td class="quota-money">'+money(totals.montant_fourrieres+totals.montant_personnalisations+totals.montant_factures)+'</td></tr>';
  $('#content').innerHTML=renderHistory()+
- '<section class="podium-workspace"><div class="podium-workspace-head"><div><div class="text-[10px] tracking-[.2em] text-zinc-600">WIDGET PUBLIC</div><h2 class="mt-1 text-xl">🏆 Podium de la semaine</h2><p class="mt-1 text-xs text-zinc-500">Les 3 employés avec le plus d\'actions sur la période sélectionnée.</p></div><button id="copyPodium" class="quota-btn secondary">Copier l\'iframe</button></div><div class="podium-preview"><iframe src="'+podiumUrl+'" title="Podium LS CUSTOM" loading="lazy"></iframe></div><details class="podium-embed"><summary>Code iframe · à intégrer sur un site</summary><textarea readonly>'+esc(iframeCode)+'</textarea><p>Pour Discord, les iframes ne sont pas exécutées dans les messages. Partage plutôt le lien public du podium : <b>'+esc(podiumUrl)+'</b>.</p></details></section>'+
+ '<section class="podium-workspace"><div class="podium-workspace-head"><div><div class="text-[10px] tracking-[.2em] text-zinc-600">WIDGET PUBLIC</div><h2 class="mt-1 text-xl">🏆 Podium de la semaine</h2><p class="mt-1 text-xs text-zinc-500">Les 3 employés avec le plus d\'actions sur la période sélectionnée.</p></div><div class="flex flex-wrap items-center gap-2"><button id="copyPodium" class="quota-btn secondary">Copier l\'iframe</button><button id="imagePodium" class="quota-btn secondary">🖼️ Convertir en image</button></div></div><div class="podium-preview"><iframe src="'+podiumUrl+'" title="Podium LS CUSTOM" loading="lazy"></iframe></div><details class="podium-embed"><summary>Code iframe · à intégrer sur un site</summary><textarea readonly>'+esc(iframeCode)+'</textarea><p>Pour Discord, les iframes ne sont pas exécutées dans les messages. Partage plutôt le lien public du podium : <b>'+esc(podiumUrl)+'</b>.</p></details></section>'+
  cards+
  '<div class="mb-4 flex flex-wrap items-center justify-between gap-3"><div><div class="text-xs uppercase tracking-[.16em] text-zinc-600">PÉRIODE</div><div class="mt-1 text-sm text-zinc-400">'+state.start+' → '+state.end+'</div></div><input id="quotaSearch" class="w-full max-w-[300px] p-3" placeholder="Rechercher un employé..."></div>'+
  '<div class="quota-table-wrap"><table class="quota-table"><thead><tr><th>Employé</th><th>Quota argent</th><th>Montant fourrière</th><th>Montant personnalisations</th><th>Montant factures</th><th>Fourrières</th><th>Réparations</th><th>Appels</th><th>Personnalisations</th><th>Factures</th><th>Total $</th></tr></thead><tbody>'+rowsHtml+totalRow+'</tbody></table></div>';
  $('#quotaSearch').oninput=e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.quota-table tbody tr[data-name]').forEach(tr=>tr.style.display=tr.dataset.name.toLowerCase().includes(q)?'':'none')};
  const historyToggle=$('#toggleImportHistory'),historyBody=$('#importHistoryBody'),historyChevron=$('#importHistoryChevron');if(historyToggle&&historyBody)historyToggle.onclick=()=>{const open=historyBody.classList.toggle('hidden');if(historyChevron)historyChevron.style.transform=open?'rotate(0deg)':'rotate(180deg)'};
  document.querySelectorAll('[data-import-period]').forEach(btn=>btn.onclick=()=>{const [start,end]=btn.dataset.importPeriod.split('|');load(start,end)});
- $('#copyPodium').onclick=async()=>{try{await navigator.clipboard.writeText(iframeCode);$('#copyPodium').textContent='✓ Iframe copié';setTimeout(()=>$('#copyPodium').textContent='Copier l\'iframe',1800)}catch{alert('Impossible de copier automatiquement. Utilise le code affiché ci-dessous.')}};
+ $('#copyPodium').onclick=async()=>{try{await navigator.clipboard.writeText(iframeCode);$('#copyPodium').textContent='✓ Iframe copié';setTimeout(()=>$('#copyPodium').textContent='Copier l\\'iframe',1800)}catch{alert('Impossible de copier automatiquement. Utilise le code affiché ci-dessous.')}};
+ $('#imagePodium').onclick=async()=>{
+   const btn=$('#imagePodium'),frame=document.querySelector('.podium-preview iframe');
+   if(!frame)return;
+   btn.disabled=true;btn.textContent='⏳ Génération...';
+   try{
+     if(!window.html2canvas){
+       await new Promise((resolve,reject)=>{
+         const sc=document.createElement('script');
+         sc.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+         sc.onload=resolve;sc.onerror=reject;document.head.appendChild(sc);
+       });
+     }
+     await new Promise((resolve,reject)=>{
+       if(frame.contentDocument?.readyState==='complete')return resolve();
+       frame.addEventListener('load',resolve,{once:true});
+       setTimeout(()=>reject(new Error('Le podium met trop de temps à charger.')),10000);
+     });
+     const target=frame.contentDocument?.body;
+     if(!target)throw new Error('Impossible d\'accéder au contenu du podium.');
+     const canvas=await window.html2canvas(target,{backgroundColor:'#050505',scale:2,useCORS:true,logging:false,windowWidth:target.scrollWidth,windowHeight:target.scrollHeight});
+     const link=document.createElement('a');
+     link.download='ls-custom-podium-'+new Date().toISOString().slice(0,10)+'.png';
+     link.href=canvas.toDataURL('image/png');
+     link.click();
+     btn.textContent='✓ Image téléchargée';
+     setTimeout(()=>btn.textContent='🖼️ Convertir en image',2200);
+   }catch(e){
+     console.error('Conversion podium en image:',e);
+     alert('Impossible de convertir le podium en image. Vérifie que le widget est chargé puis réessaie.');
+     btn.textContent='🖼️ Convertir en image';
+   }finally{btn.disabled=false}
+ };
 }
 function openImport(){
  document.body.insertAdjacentHTML('beforeend',modal());
