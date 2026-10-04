@@ -5,7 +5,7 @@ import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import db,{getRecruitments,getRecruitment,createRecruitment,createApplication,hasRecentApplication,getApplicationsForUser,getSetting,setSetting,audit,getAuditLogs,createTicket,getTicket,getTicketsForUser,consumeLoginCode,createAbsence,getAbsences,getAbsencesForUser,deleteAbsence,getHierarchy,upsertHierarchyRole,deleteHierarchyRole,getEmployees,upsertEmployee,deleteEmployee,updateEmployeeProfile,linkEmployeeDiscord,unlinkEmployeeDiscord,getQuotaEntries,upsertQuota,clearQuotaData,purgeEmployees,getPartnerships,getPartnership,findMatchingPartnership,mergePartnershipRecords,upsertPartnership,getPartnershipByDiscordChannel,deletePartnership,createPartnershipAccess,getPartnershipByAccessHash,setPartnershipPaymentProof,clearPartnershipPaymentProof,organisationStats,setRolePermissions,purgeGuildData,syncEmployeeIdentity,updateRecruitment,countRecentApplicationsByIdentity,countSecurityAttempts,recordSecurityAttempt,createAnnouncement,getAnnouncements,markAnnouncementRead,deleteAnnouncement,getMailContacts,createPrivateMail,getMailConversations,getMailMessages,markMailConversationRead,saveQuotaImport,getQuotaImports,createLoginLink,getLoginLinkByHash,touchLoginLink,revokeLoginLink,getLoginAccounts} from './db.js';
+import db,{getRecruitments,getRecruitment,createRecruitment,createApplication,hasRecentApplication,getApplicationsForUser,getSetting,setSetting,audit,getAuditLogs,createTicket,getTicket,getTicketsForUser,consumeLoginCode,createAbsence,getAbsences,getAbsencesForUser,deleteAbsence,getHierarchy,upsertHierarchyRole,deleteHierarchyRole,getEmployees,upsertEmployee,deleteEmployee,updateEmployeeProfile,linkEmployeeDiscord,unlinkEmployeeDiscord,getQuotaEntries,upsertQuota,purgeEmployees,getPartnerships,getPartnership,findMatchingPartnership,mergePartnershipRecords,upsertPartnership,getPartnershipByDiscordChannel,deletePartnership,createPartnershipAccess,getPartnershipByAccessHash,setPartnershipPaymentProof,clearPartnershipPaymentProof,organisationStats,setRolePermissions,purgeGuildData,syncEmployeeIdentity,updateRecruitment,countRecentApplicationsByIdentity,countSecurityAttempts,recordSecurityAttempt,createAnnouncement,getAnnouncements,markAnnouncementRead,deleteAnnouncement,getMailContacts,createPrivateMail,getMailConversations,getMailMessages,markMailConversationRead,saveQuotaImport,getQuotaImports,createLoginLink,getLoginLinkByHash,touchLoginLink,revokeLoginLink,getLoginAccounts} from './db.js';
 import {notifyWebsiteApplication,notifyWebsiteTicket,getMemberAccess,client,sendPartnershipPortalMessage,syncPartnershipProposalMessage,ensurePartnershipDiscordTicket,publishFromDashboard,sendDiscordPrivateMail,publishAnnouncementDiscord} from './bot.js';
 
 const app=express();
@@ -263,7 +263,11 @@ app.post('/api/employee/quotas/clear',playerAuth,async(req,res)=>{try{
  const allowedRole=a.isAdmin||a.permissions.includes('activity_all')||a.permissions.includes('all');
  if(!allowedRole)return res.status(403).json({error:'Seuls les responsables RH autorisés peuvent vider les quotas.'});
  if(String(req.body?.confirmation||'')!=='VIDER_QUOTAS')return res.status(400).json({error:'Confirmation invalide. Saisis VIDER_QUOTAS.'});
- const result=clearQuotaData(g);
+ const result=db.transaction(()=>{
+  const quota=db.prepare('DELETE FROM quota_entries WHERE guild_id=?').run(g).changes;
+  const imports=db.prepare('DELETE FROM quota_imports WHERE guild_id=?').run(g).changes;
+  return {quota_entries:quota,quota_imports:imports};
+ })();
  audit(g,req.session.player.id,'quota.data.cleared',JSON.stringify(result));
  res.json({ok:true,result});
 }catch(e){console.error(e);res.status(500).json({error:'Impossible de vider les quotas.'})}});
