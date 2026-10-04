@@ -48,7 +48,7 @@ const clock=top.querySelector('#lsClock');const tick=()=>{if(clock)clock.textCon
  trigger.onclick=()=>{overlay.hasAttribute('hidden')?open():close()};
  overlay.addEventListener('click',e=>{if(e.target===overlay)close()});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!overlay.hasAttribute('hidden'))close()});
- const logout=()=>api('/auth/player/logout',{method:'POST'}).finally(()=>location.href='/connexion');top.querySelector('#profileLogout').onclick=logout;
+ const logout=()=>{if(window.__LS_IMPERSONATION)return fetch('/api/developer/impersonation/stop',{method:'POST',credentials:'same-origin'}).then(()=>location.href='/developpeur');return api('/auth/player/logout',{method:'POST'}).finally(()=>location.href='/connexion')};top.querySelector('#profileLogout').onclick=logout;
 }
 async function init(){try{const r=await api('/api/session/access');window.__LS_ACCESS=r.access;window.__LS_IMPERSONATION=r.impersonation||null;shell(r.access,r.user||{});document.documentElement.classList.add('ls-ready')}catch(e){if(path!=='/connexion')location.href='/connexion'}}init()})();
 /* Global LS CUSTOM UX enhancements */
