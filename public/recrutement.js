@@ -100,6 +100,21 @@ function openImport(){
  };
 }
 
+async function clearQuotas(){
+ const ok=confirm('⚠️ VIDER LES QUOTAS\n\nCette action supprime tous les relevés de quotas et tout l’historique des imports pour ce serveur. Les employés, rôles, comptes et réglages seront conservés.\n\nContinuer ?');
+ if(!ok)return;
+ const confirmation=prompt('Pour confirmer définitivement, saisis exactement : VIDER_QUOTAS');
+ if(confirmation!=='VIDER_QUOTAS')return alert('Action annulée : confirmation incorrecte.');
+ const btn=$('#clearQuotaButton');
+ try{
+  btn.disabled=true;btn.textContent='Suppression…';
+  const r=await api('/api/employee/quotas/clear',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirmation})});
+  btn.textContent='✓ Quotas vidés';
+  await load(state.start,state.end);
+  alert('Quotas vidés : '+Number(r.result?.quota_entries||0)+' relevé(s) et '+Number(r.result?.quota_imports||0)+' import(s) supprimé(s).');
+ }catch(e){btn.disabled=false;btn.textContent='🗑 Vider les quotas';alert(e.message||'Impossible de vider les quotas.');}
+}
+
 async function load(start,end){
  state.start=start;state.end=end;
  const [activity,history]=await Promise.all([api('/api/employee/activity?start='+encodeURIComponent(start)+'&end='+encodeURIComponent(end)),api('/api/employee/quotas/imports')]);
@@ -115,7 +130,7 @@ async function main(){
   if(a.access.isAdmin)$('#developerNav')?.classList.remove('hidden');
   const [s,e]=localDate();state.start=s;state.end=e;
   const canImport=a.access.isAdmin||a.access.permissions.includes('activity_all')||a.access.permissions.includes('all');
-  if(canImport){$('#actions').innerHTML='<button id="importButton" class="quota-btn">＋ Importer les interventions</button>';$('#importButton').onclick=openImport}
+  if(canImport){$('#actions').innerHTML='<div class="flex flex-wrap gap-2"><button id="importButton" class="quota-btn">＋ Importer les interventions</button><button id="clearQuotaButton" class="quota-btn secondary border-red-900/60 text-red-300 hover:border-red-700 hover:bg-red-950/30">🗑 Vider les quotas</button></div>';$('#importButton').onclick=openImport;$('#clearQuotaButton').onclick=clearQuotas}
   await load(s,e);
  }catch(e){$('#content').innerHTML='<div class="org-panel p-5 text-red-400">'+esc(e.message)+'</div>'}
 }
