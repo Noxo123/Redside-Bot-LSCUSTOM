@@ -1196,3 +1196,16 @@ body:has(#kpis) #toast{
 @media(prefers-reduced-motion:reduce){
   body:has(#kpis) *{scroll-behavior:auto!important;transition:none!important}
 }
+
+/* Pilotage — quota follow-up */
+body:has(#quotaFollowupList) #quotaFollowup{
+  background:linear-gradient(145deg,rgba(18,18,21,.98),rgba(10,10,12,.98))!important;
+}
+body:has(#quotaFollowupList) .quota-followup-row{
+  transition:.18s ease;
+  border-color:rgba(255,255,255,.055)!important;
+}
+body:has(#quotaFollowupList) .quota-followup-row:hover{
+  border-color:rgba(212,160,23,.16)!important;
+  transform:translateX(2px);
+}
