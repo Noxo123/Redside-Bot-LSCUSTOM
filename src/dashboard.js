@@ -137,34 +137,35 @@ app.post('/api/developer/impersonation/start/:id',playerAuth,async(req,res)=>{
   const g=req.session.player.guildId,id=Number(req.params.id),employee=getEmployees(g).find(e=>Number(e.id)===id);
   if(!employee)return res.status(404).json({error:'Utilisateur introuvable.'});
 
-  // Mode développeur : l'impersonation repose sur le profil RH local.
-  // Aucun compte Discord n'est requis, recherché, lié ou modifié.
-  const targetId=String(employee.user_id||'').startsWith('demo:')||String(employee.user_id||'').startsWith('impersonate:')
-    ? String(employee.user_id)
-    : (String(employee.user_id||'').trim()||`impersonate:${employee.id}`);
-
+  // Le profil simulé est TOUJOURS local. Aucun ID Discord n'est réutilisé.
+  const targetId=`impersonate:${employee.id}`;
   const original={...req.session.player};
-  req.session.impersonation={
-    originalPlayer:original,
-    developerId:original.id,
-    targetId,
-    targetEmployeeId:employee.id,
-    startedAt:Date.now(),
-    developerOnly:true
-  };
-  req.session.player={
-    id:targetId,
-    username:employee.username||'',
-    global_name:employee.display_name||employee.username||'Utilisateur',
-    avatar:null,
-    guildId:g,
-    login:'developer-impersonation',
-    impersonated:true
-  };
-  req.session.save(err=>{
-    if(err)return res.status(500).json({error:'Impossible d’enregistrer la session utilisateur.'});
-    audit(g,original.id,'developer.impersonation.started',JSON.stringify({employeeId:employee.id,targetId,discordLinked:false}));
-    res.json({ok:true,redirect:'/dashboard',user:{id:targetId,display_name:employee.display_name}});
+
+  // Rotation de l'ID de session : le cookie de session précédent est invalidé.
+  req.session.regenerate(err=>{
+    if(err)return res.status(500).json({error:'Impossible de sécuriser la session développeur.'});
+    req.session.impersonation={
+      originalPlayer:original,
+      developerId:original.id,
+      targetId,
+      targetEmployeeId:employee.id,
+      startedAt:Date.now(),
+      developerOnly:true
+    };
+    req.session.player={
+      id:targetId,
+      username:employee.username||'',
+      global_name:employee.display_name||employee.username||'Utilisateur',
+      avatar:null,
+      guildId:g,
+      login:'developer-impersonation',
+      impersonated:true
+    };
+    req.session.save(saveErr=>{
+      if(saveErr)return res.status(500).json({error:'Impossible d’enregistrer la session développeur sécurisée.'});
+      audit(g,original.id,'developer.impersonation.started',JSON.stringify({employeeId:employee.id,targetId,discordLinked:false,sessionRotated:true}));
+      res.json({ok:true,redirect:'/dashboard',user:{id:targetId,display_name:employee.display_name}});
+    });
   });
  }catch(e){
   console.error('Démarrage impersonation:',e);
