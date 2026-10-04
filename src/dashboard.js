@@ -113,7 +113,8 @@ const clean=(v,max)=>String(v??'').trim().slice(0,max);
 const publicGuildId=()=>process.env.DEFAULT_GUILD_ID||null;
 const SITE_BASE_URL=process.env.PUBLIC_BASE_URL||'https://ls-custom.chantiertrack.fr';
 const parseJson=(v,fallback)=>{try{return JSON.parse(v||JSON.stringify(fallback))}catch{return fallback}};
-const playerAuth=(req,res,next)=>req.session.player?next():res.status(401).json({error:'Connexion Discord requise'});\nconst effectiveEmployeeUserId=req=>{const p=req.session.player||{};const id=String(p.id||'');if(id.startsWith('impersonate:')){const employee=getEmployees(p.guildId).find(e=>Number(e.id)===Number(id.slice('impersonate:'.length)));if(employee?.user_id)return String(employee.user_id)}return id};
+const playerAuth=(req,res,next)=>req.session.player?next():res.status(401).json({error:'Connexion Discord requise'});
+const effectiveEmployeeUserId=req=>{const p=req.session.player||{};const id=String(p.id||'');if(id.startsWith('impersonate:')){const employee=getEmployees(p.guildId).find(e=>Number(e.id)===Number(id.slice('impersonate:'.length)));if(employee?.user_id)return String(employee.user_id)}return id};
 const establishPlayerSession=(req,data,cb)=>{req.session.regenerate(err=>{if(err)return cb(err);req.session.player=data;req.session.save(cb)})};
 const authCodeHits=new Map();function authCodeAllowed(req){const key=crypto.createHash('sha256').update(String(req.ip||'unknown')+'|'+String(req.get('user-agent')||'')).digest('hex');const now=Date.now(),x=authCodeHits.get(key)||{at:now,count:0};if(now-x.at>10*60*1000){x.at=now;x.count=0}x.count++;authCodeHits.set(key,x);return x.count<=8}
 const publicHits=new Map();
