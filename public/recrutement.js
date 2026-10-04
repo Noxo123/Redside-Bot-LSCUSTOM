@@ -18,7 +18,7 @@ function modal(){
 function renderHistory(){
  const rows=state.imports||[];
  if(!rows.length)return '<section class="mb-6 rounded-2xl border border-zinc-800 bg-[#090909] p-5"><div class="text-[10px] font-bold tracking-[.2em] text-zinc-600">HISTORIQUE RH</div><h2 class="mt-1 text-lg font-semibold text-white">Imports enregistrés</h2><p class="mt-2 text-sm text-zinc-500">Aucun import enregistré pour le moment.</p></section>';
- return '<section class="mb-6 rounded-2xl border border-zinc-800 bg-[#090909] overflow-hidden"><button type="button" id="toggleImportHistory" class="w-full flex flex-wrap items-center justify-between gap-3 p-5 text-left hover:bg-white/[.02] transition-colors"><div><div class="text-[10px] font-bold tracking-[.2em] text-zinc-600">HISTORIQUE RH</div><h2 class="mt-1 text-lg font-semibold text-white">Imports enregistrés</h2><p class="mt-1 text-xs text-zinc-500">La date et l’heure correspondent au moment où l’import a été validé et écrit en base.</p></div><span class="flex items-center gap-3"><span class="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs text-zinc-500">'+rows.length+' import(s)</span><span id="importHistoryChevron" class="grid h-8 w-8 place-items-center rounded-lg border border-zinc-800 text-zinc-400 transition-transform">⌄</span></span></button><div id="importHistoryBody" class="hidden border-t border-zinc-800"><div class="overflow-x-auto"><table class="min-w-full text-left text-sm"><thead><tr class="border-b border-zinc-800 text-[10px] uppercase tracking-wider text-zinc-600"><th class="px-3 py-3">Date / heure</th><th class="px-3 py-3">Période</th><th class="px-3 py-3">Par</th><th class="px-3 py-3">Lignes</th><th class="px-3 py-3">Créés</th><th class="px-3 py-3">Statut</th><th class="px-3 py-3"></th></tr></thead><tbody>'+rows.map(x=>'<tr class="border-b border-zinc-900 last:border-0"><td class="px-3 py-3 whitespace-nowrap text-zinc-300">'+esc(formatDateTime(x.imported_at))+'</td><td class="px-3 py-3 whitespace-nowrap text-zinc-400">'+esc(x.period_start)+' → '+esc(x.period_end)+'</td><td class="px-3 py-3 text-zinc-400">'+esc(x.imported_by_name||x.imported_by||'—')+'</td><td class="px-3 py-3 text-zinc-300">'+Number(x.imported_count||0)+'</td><td class="px-3 py-3 text-zinc-400">'+Number(x.created_count||0)+'</td><td class="px-3 py-3"><span class="rounded-full border border-emerald-900/60 bg-emerald-950/30 px-2 py-1 text-xs text-emerald-400">'+esc(x.status||'completed')+'</span></td><td class="px-3 py-3 text-right"><button class="quota-btn secondary text-xs" data-import-period="'+esc(x.period_start)+'|'+esc(x.period_end)+'">Charger</button></td></tr>').join('')+'</tbody></table></div></div></section>';
+ return '<section class="mb-6 rounded-2xl border border-zinc-800 bg-[#090909] overflow-hidden"><button type="button" id="toggleImportHistory" class="w-full flex flex-wrap items-center justify-between gap-3 p-5 text-left hover:bg-white/[.02] transition-colors"><div><div class="text-[10px] font-bold tracking-[.2em] text-zinc-600">HISTORIQUE RH</div><h2 class="mt-1 text-lg font-semibold text-white">Imports enregistrés</h2><p class="mt-1 text-xs text-zinc-500">La date et l’heure correspondent au moment où l’import a été validé et écrit en base.</p></div><span class="flex items-center gap-3"><span class="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs text-zinc-500">'+rows.length+' import(s)</span><span id="importHistoryChevron" class="grid h-8 w-8 place-items-center rounded-lg border border-zinc-800 text-zinc-400 transition-transform">⌄</span></span></button><div id="importHistoryBody" class="hidden border-t border-zinc-800"><div class="overflow-x-auto"><table class="min-w-full text-left text-sm"><thead><tr class="border-b border-zinc-800 text-[10px] uppercase tracking-wider text-zinc-600"><th class="px-3 py-3">Date / heure</th><th class="px-3 py-3">Période</th><th class="px-3 py-3">Par</th><th class="px-3 py-3">Lignes</th><th class="px-3 py-3">Créés</th><th class="px-3 py-3">Statut</th><th class="px-3 py-3"></th></tr></thead><tbody>'+rows.map(x=>'<tr class="border-b border-zinc-900 last:border-0"><td class="px-3 py-3 whitespace-nowrap text-zinc-300">'+esc(formatDateTime(x.imported_at))+'</td><td class="px-3 py-3 whitespace-nowrap text-zinc-400">'+esc(x.period_start)+' → '+esc(x.period_end)+'</td><td class="px-3 py-3 text-zinc-400">'+esc(x.imported_by_name||x.imported_by||'—')+'</td><td class="px-3 py-3 text-zinc-300">'+Number(x.imported_count||0)+'</td><td class="px-3 py-3 text-zinc-400">'+Number(x.created_count||0)+'</td><td class="px-3 py-3"><span class="rounded-full border border-emerald-900/60 bg-emerald-950/30 px-2 py-1 text-xs text-emerald-400">'+esc(x.status||'completed')+'</span></td><td class="px-3 py-3 text-right"><button class="quota-btn secondary text-xs" data-import-id="'+Number(x.id)+'" data-import-period="'+esc(x.period_start)+'|'+esc(x.period_end)+'">Restaurer</button></td></tr>').join('')+'</tbody></table></div></div></section>';
 }
 
 function render(){
@@ -71,7 +71,17 @@ function render(){
  '<div class="quota-table-wrap"><table class="quota-table"><thead><tr><th>Employé</th><th>Quota argent</th><th>Montant fourrière</th><th>Montant personnalisations</th><th>Montant factures</th><th>Fourrières</th><th>Réparations</th><th>Appels</th><th>Personnalisations</th><th>Factures</th><th>Total $</th></tr></thead><tbody>'+rowsHtml+totalRow+'</tbody></table></div>';
  $('#quotaSearch').oninput=e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.quota-table tbody tr[data-name]').forEach(tr=>tr.style.display=tr.dataset.name.toLowerCase().includes(q)?'':'none')};
  const historyToggle=$('#toggleImportHistory'),historyBody=$('#importHistoryBody'),historyChevron=$('#importHistoryChevron');if(historyToggle&&historyBody)historyToggle.onclick=()=>{const open=historyBody.classList.toggle('hidden');if(historyChevron)historyChevron.style.transform=open?'rotate(0deg)':'rotate(180deg)'};
- document.querySelectorAll('[data-import-period]').forEach(btn=>btn.onclick=()=>{const [start,end]=btn.dataset.importPeriod.split('|');load(start,end)});
+ document.querySelectorAll('[data-import-id]').forEach(btn=>btn.onclick=async()=>{
+  const id=Number(btn.dataset.importId);if(!id)return;
+  const original=btn.textContent;btn.disabled=true;btn.textContent='Restauration…';
+  try{
+    const r=await api('/api/employee/quotas/imports/'+id+'/activate',{method:'POST'});
+    const start=r.import?.period_start,end=r.import?.period_end;
+    if(!start||!end)throw Error('Période restaurée introuvable.');
+    await load(start,end);
+  }catch(e){alert(e.message||'Impossible de restaurer cette sauvegarde.');}
+  finally{btn.disabled=false;btn.textContent=original}
+});
  $('#copyPodium').onclick=async()=>{try{await navigator.clipboard.writeText(iframeCode);$('#copyPodium').textContent='✓ Iframe copié';setTimeout(()=>$('#copyPodium').textContent='Copier l\'iframe',1800)}catch{alert('Impossible de copier automatiquement. Utilise le code affiché ci-dessous.')}};
  $('#imagePodium').onclick=async()=>{
    const btn=$('#imagePodium'),frame=document.querySelector('.podium-preview iframe');
@@ -160,7 +170,13 @@ async function main(){
   $('#user').textContent=(a.user.global_name||a.user.username)+' — '+((a.access.roles||[]).map(x=>x.name).join(' • ')||'Employé');
   $('#logout').onclick=async()=>{await api('/auth/player/logout',{method:'POST'});location.href='/connexion'};
   if(a.access.isAdmin)$('#developerNav')?.classList.remove('hidden');
-  const [s,e]=localDate();state.start=s;state.end=e;
+  const [fallbackStart,fallbackEnd]=localDate();
+  let s=fallbackStart,e=fallbackEnd;
+  try{
+    const active=await api('/api/employee/quotas/active');
+    if(active.import?.period_start&&active.import?.period_end){s=active.import.period_start;e=active.import.period_end;}
+  }catch{}
+  state.start=s;state.end=e;
   const canImport=a.access.isAdmin||a.access.permissions.includes('activity_all')||a.access.permissions.includes('all');
   if(canImport){$('#actions').innerHTML='<div class="flex flex-wrap gap-2"><button id="importButton" class="quota-btn">＋ Importer les interventions</button><button id="clearQuotaButton" class="quota-btn secondary border-red-900/60 text-red-300 hover:border-red-700 hover:bg-red-950/30">🗑 Vider les quotas</button></div>';$('#importButton').onclick=openImport;$('#clearQuotaButton').onclick=clearQuotas}
   await load(s,e);
