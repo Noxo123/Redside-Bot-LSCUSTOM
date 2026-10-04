@@ -343,6 +343,12 @@ function ensureQuotaImportColumns(){
  const icols=db.prepare('PRAGMA table_info(quota_imports)').all().map(x=>x.name);
  const additions=[['source_text',"TEXT NOT NULL DEFAULT ''"],['imported_count','INTEGER NOT NULL DEFAULT 0'],['created_count','INTEGER NOT NULL DEFAULT 0'],['skipped_count','INTEGER NOT NULL DEFAULT 0'],['error_count','INTEGER NOT NULL DEFAULT 0'],['status',"TEXT NOT NULL DEFAULT 'completed'"]];
  for(const [name,type] of additions) if(!icols.includes(name)) db.exec('ALTER TABLE quota_imports ADD COLUMN '+name+' '+type);
+ const snapshotCount=db.prepare('SELECT COUNT(*) AS n FROM quota_import_snapshots').get()?.n||0;
+ if(!Number(snapshotCount)){
+   const legacy=db.prepare("SELECT q.*,qi.period_start AS import_period_start,qi.period_end AS import_period_end FROM quota_entries q JOIN quota_imports qi ON qi.id=q.import_batch_id WHERE q.import_batch_id IS NOT NULL").all();
+   const insert=db.prepare('INSERT OR IGNORE INTO quota_import_snapshots(import_id,employee_user_id,employee_name,appels,reparations,fourrieres,personnalisations,factures,montant_fourrieres,montant_personnalisations,montant_factures,note) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)');
+   const tx=db.transaction(()=>{for(const q of legacy)insert.run(q.import_batch_id,q.user_id||null,q.display_name||q.username||'Employé',q.appels||0,q.reparations||0,q.fourrieres||0,q.personnalisations||0,q.factures||0,q.montant_fourrieres||0,q.montant_personnalisations||0,q.montant_factures||0,q.note||'Import RH des interventions')});tx();
+ }
 }
 ensureQuotaImportColumns();
 
