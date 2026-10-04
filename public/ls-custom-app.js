@@ -1,5 +1,5 @@
 (()=>{const path=location.pathname;const publicPage=['/connexion','/','/podium'].includes(path)||path.startsWith('/recrutement/');if(publicPage)return;
-const api=async(u,o)=>{const r=await fetch(u,o);const d=await r.json().catch(()=>({}));if((r.status===401||r.status===403)&&location.pathname!=='/connexion'){location.replace('/connexion');throw Error('Session expirée');}if(!r.ok)throw Error(d.error||'Erreur');return d};
+const api=async(u,o)=>{const r=await fetch(u,{credentials:'same-origin',cache:'no-store',...o,headers:{'Cache-Control':'no-cache',...(o?.headers||{})}});const d=await r.json().catch(()=>({}));if((r.status===401||r.status===403)&&location.pathname!=='/connexion'){location.replace('/connexion');throw Error('Session expirée');}if(!r.ok)throw Error(d.error||'Erreur');return d};
 const links=[['/dashboard','⌂','LS CUSTOM — Tableau de bord'],
  ['/pilotage','◈','LS CUSTOM — Pilotage'],['/equipe','♙','LS CUSTOM — Équipe'],['/activite','▦','LS CUSTOM — Activité & quotas'],['/agenda','□','LS CUSTOM — Agenda RH'],['/annonces','◉','LS CUSTOM — Annonces'],['/messagerie','✉','LS CUSTOM — Messagerie'],['/partenariats','◇','LS CUSTOM — Partenariats'],['/developpeur','⚙','LS CUSTOM — Développeur']];
 const perms={'/equipe':'team','/partenariats':'partnerships','/developpeur':'developer'};
