@@ -101,6 +101,10 @@ CREATE TABLE IF NOT EXISTS quota_imports (
 );
 CREATE INDEX IF NOT EXISTS idx_quota_imports_guild_date ON quota_imports(guild_id,imported_at DESC);
 CREATE INDEX IF NOT EXISTS idx_quota_imports_hash ON quota_imports(guild_id,source_hash);
+CREATE TABLE IF NOT EXISTS quota_import_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT,import_id INTEGER NOT NULL,employee_user_id TEXT,employee_name TEXT NOT NULL,appels INTEGER NOT NULL DEFAULT 0,reparations INTEGER NOT NULL DEFAULT 0,fourrieres INTEGER NOT NULL DEFAULT 0,personnalisations INTEGER NOT NULL DEFAULT 0,factures INTEGER NOT NULL DEFAULT 0,montant_fourrieres INTEGER NOT NULL DEFAULT 0,montant_personnalisations INTEGER NOT NULL DEFAULT 0,montant_factures INTEGER NOT NULL DEFAULT 0,note TEXT,UNIQUE(import_id,employee_name),FOREIGN KEY(import_id) REFERENCES quota_imports(id) ON DELETE CASCADE);
+CREATE INDEX IF NOT EXISTS idx_quota_import_snapshots_import ON quota_import_snapshots(import_id);
+CREATE TABLE IF NOT EXISTS quota_active_periods (guild_id TEXT NOT NULL,period_start TEXT NOT NULL,period_end TEXT NOT NULL,import_id INTEGER NOT NULL,updated_at TEXT NOT NULL,PRIMARY KEY(guild_id,period_start,period_end),FOREIGN KEY(import_id) REFERENCES quota_imports(id) ON DELETE CASCADE);
+CREATE INDEX IF NOT EXISTS idx_quota_active_periods_guild ON quota_active_periods(guild_id,updated_at DESC);
 
 
 CREATE TABLE IF NOT EXISTS partnerships (
@@ -424,6 +428,7 @@ export function saveQuotaImport(d){
        continue;
      }
      upsertQuota({...row,guildId:d.guildId,employeeId:employee.id,periodStart:d.periodStart,periodEnd:d.periodEnd,importBatchId:batchId,importedAt,note:'Import RH des interventions'});
+     db.prepare('INSERT OR REPLACE INTO quota_import_snapshots(import_id,employee_user_id,employee_name,appels,reparations,fourrieres,personnalisations,factures,montant_fourrieres,montant_personnalisations,montant_factures,note) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(batchId,employee.user_id||null,employee.display_name||employee.username||row.name,Number(row.appels)||0,Number(row.reparations)||0,Number(row.fourrieres)||0,Number(row.personnalisations)||0,Number(row.factures)||0,Number(row.montantFourrieres)||0,Number(row.montantPersonnalisations)||0,Number(row.montantFactures)||0,row.note||'Import RH des interventions');
      imported.push({name:row.name,employeeId:employee.id,role:employee.role_name||employee.role_key||null});
    }
    db.prepare('UPDATE quota_imports SET imported_count=?,created_count=?,skipped_count=?,status=? WHERE id=?').run(imported.length,created.length,skipped.length,'completed',batchId);
@@ -433,6 +438,13 @@ export function saveQuotaImport(d){
  audit(d.guildId,d.importedBy||null,'quota.import.completed',JSON.stringify({batchId:result.batchId,importUid:result.importUid,periodStart:d.periodStart,periodEnd:d.periodEnd,count:result.imported.length,created:result.created.length,skipped:result.skipped.length,cleaned:result.cleaned.length,importedAt}));
  return {...getQuotaImport(result.batchId,d.guildId),...result,duplicate:false,importedAt};
 }
+export function getActiveQuotaImport(guildId,periodStart=null,periodEnd=null){const row=periodStart&&periodEnd?db.prepare('SELECT qi.* FROM quota_imports qi JOIN quota_active_periods ap ON ap.import_id=qi.id WHERE ap.guild_id=? AND ap.period_start=? AND ap.period_end=?').get(guildId,periodStart,periodEnd):db.prepare('SELECT qi.* FROM quota_imports qi JOIN quota_active_periods ap ON ap.import_id=qi.id WHERE ap.guild_id=? ORDER BY ap.updated_at DESC LIMIT 1').get(guildId);return row||null}
+export function getLatestQuotaImport(guildId){return db.prepare("SELECT * FROM quota_imports WHERE guild_id=? AND status='completed' ORDER BY imported_at DESC,id DESC LIMIT 1").get(guildId)||null}
+export function activateQuotaImport(importId,guildId){
+ const imp=getQuotaImport(Number(importId),guildId);if(!imp)return null;
+ const snapshots=db.prepare('SELECT * FROM quota_import_snapshots WHERE import_id=? ORDER BY id ASC').all(imp.id);if(!snapshots.length)return null;
+ const resolveEmployee=s=>{let e=s.employee_user_id?db.prepare('SELECT * FROM employees WHERE guild_id=? AND user_id=?').get(guildId,s.employee_user_id):null;if(!e){const norm=v=>String(v||'').trim().toLocaleLowerCase('fr-FR').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/\\s+/g,' ');const key=norm(s.employee_name);e=db.prepare('SELECT * FROM employees WHERE guild_id=?').all(guildId).find(x=>norm(x.display_name||x.username)===key)||null}if(!e){const clean=String(s.employee_name||'Employé').trim();e=upsertEmployee({guildId,userId:'import:'+crypto.randomUUID(),username:clean,displayName:clean,status:'active',quotaEnabled:true,quotaTarget:0,notes:'Employé créé automatiquement lors d’une restauration RH.'})}return e};
+ const tx=db.transaction(()=>{db.prepare('DELETE FROM quota_entries WHERE guild_id=? AND period_start=? AND period_end=?').run(guildId,imp.period_start,imp.period_end);for(const s of snapshots){const e=resolveEmployee(s);upsertQuota({guildId,employeeId:e.id,periodStart:imp.period_start,periodEnd:imp.period_end,appels:s.appels,reparations:s.reparations,fourrieres:s.fourrieres,personnalisations:s.personnalisations,factures:s.factures,montantFourrieres:s.montant_fourrieres,montantPersonnalisations:s.montant_personnalisations,montantFactures:s.montant_factures,note:s.note,importBatchId:imp.id,importedAt:imp.imported_at})}db.prepare('INSERT INTO quota_active_periods(guild_id,period_start,period_end,import_id,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(guild_id,period_start,period_end) DO UPDATE SET import_id=excluded.import_id,updated_at=excluded.updated_at').run(guildId,imp.period_start,imp.period_end,imp.id,new Date().toISOString())});tx();audit(guildId,null,'quota.import.activated',JSON.stringify({importId:imp.id,periodStart:imp.period_start,periodEnd:imp.period_end}));return getQuotaImport(imp.id,guildId)}
 export function getQuotaEntry(id,guildId){return db.prepare('SELECT q.*,e.username,e.display_name,e.role_key,h.name AS role_name,e.quota_target,e.quota_enabled FROM quota_entries q JOIN employees e ON e.id=q.employee_id LEFT JOIN hierarchy_roles h ON h.guild_id=e.guild_id AND h.role_key=e.role_key WHERE q.id=? AND q.guild_id=?').get(id,guildId)}
 
 function ensurePartnershipTermsColumns(){
