@@ -243,6 +243,33 @@ export function getEmployeeBadges(guildId){return db.prepare('SELECT eb.*,b.badg
 export function awardBadge(guildId,employeeId,badgeKey){const badge=db.prepare('SELECT * FROM badges WHERE guild_id=? AND badge_key=?').get(guildId,badgeKey);if(!badge)return null;const now=new Date().toISOString();db.prepare('INSERT OR IGNORE INTO employee_badges(guild_id,employee_id,badge_id,awarded_at) VALUES(?,?,?,?)').run(guildId,employeeId,badge.id,now);return db.prepare('SELECT eb.*,b.badge_key,b.name,b.description,b.icon FROM employee_badges eb JOIN badges b ON b.id=eb.badge_id WHERE eb.guild_id=? AND eb.employee_id=? AND eb.badge_id=?').get(guildId,employeeId,badge.id)}
 export function organisationAnalytics(guildId,startDate,endDate){const period=getQuotaEntries(guildId,startDate,endDate);const employees=getEmployees(guildId);const totals=period.reduce((a,r)=>{for(const k of ['appels','reparations','fourrieres','personnalisations','factures','montant_fourrieres','montant_personnalisations','montant_factures'])a[k]=(a[k]||0)+(Number(r[k])||0);return a},{montant_total:0});totals.montant_total=totals.montant_fourrieres+totals.montant_personnalisations+totals.montant_factures;const ranking=period.map(r=>({...r,montant_total:(Number(r.montant_fourrieres)||0)+(Number(r.montant_personnalisations)||0)+(Number(r.montant_factures)||0)})).sort((a,b)=>b.montant_total-a.montant_total);return{period:{startDate,endDate},employees:employees.length,activeEmployees:employees.filter(e=>e.status==='active').length,totals,ranking}}
 
+export function getQuotaFollowup(guildId,now=new Date()){
+ const d=new Date(now);
+ const day=(d.getDay()+6)%7;
+ const start=new Date(d); start.setDate(d.getDate()-day); start.setHours(0,0,0,0);
+ const end=new Date(start); end.setDate(start.getDate()+6);
+ const startDate=start.toISOString().slice(0,10),endDate=end.toISOString().slice(0,10);
+ const todayElapsed=Math.min(1,Math.max(0,(d-start)/(end-start)));
+ const employees=getEmployees(guildId).filter(e=>e.status==='active'&&Number(e.quota_enabled)!==0&&Number(e.quota_target)>0);
+ const rows=getQuotaEntries(guildId,startDate,endDate);
+ const byEmployee=new Map(rows.map(r=>[Number(r.employee_id),r]));
+ return employees.map(e=>{
+   const q=byEmployee.get(Number(e.id))||{};
+   const actual=(Number(q.montant_fourrieres)||0)+(Number(q.montant_personnalisations)||0)+(Number(q.montant_factures)||0);
+   const target=Number(e.quota_target)||0;
+   const expected=target*todayElapsed;
+   const gap=Math.max(0,target-actual);
+   const expectedGap=Math.max(0,expected-actual);
+   const progress=target?Math.min(100,actual/target*100):100;
+   const pace=expected?actual/expected*100:100;
+   let status='ok';
+   if(actual<=0&&todayElapsed>=0.25) status='urgent';
+   else if(actual<expected*0.65) status='retard';
+   else if(actual<expected) status='attention';
+   return {...e,period_start:startDate,period_end:endDate,actual,target,expected,gap,expected_gap:expectedGap,progress,pace,status};
+ }).sort((a,b)=>({urgent:0,retard:1,attention:2,ok:3}[a.status]-({urgent:0,retard:1,attention:2,ok:3}[b.status])||b.expected_gap-a.expected_gap));
+}
+
 export default db;
 
 export function createLoginLink(d){const now=new Date().toISOString();db.prepare('UPDATE login_links SET revoked_at=? WHERE guild_id=? AND user_id=? AND revoked_at IS NULL').run(now,d.guildId,d.userId);const r=db.prepare('INSERT INTO login_links(guild_id,user_id,token_hash,created_at,expires_at,created_by) VALUES(?,?,?,?,?,?)').run(d.guildId,d.userId,d.tokenHash,now,new Date(Date.now()+30*86400000).toISOString(),d.createdBy||null);return db.prepare('SELECT * FROM login_links WHERE id=?').get(r.lastInsertRowid)}
