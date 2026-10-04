@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, AttachmentBuilder, StringSelectMenuBuilder } from 'discord.js';
-import db,{ upsertGuild, createRecruitment, setRecruitmentStatus, getApplications, getSetting, setSetting, audit, createLoginCode, invalidateLoginCodes,upsertEmployee,getEmployees,getPermissionsForDiscordRoles,upsertPartnership,getPartnership,findMatchingPartnership,mergePartnershipRecords,getPartnershipByDiscordChannel,getTicketByDiscordChannel,createTicket,setTicketDiscordChannel,getAnnouncementRecipients,getPartnerships,createPrivateMail,getLatestMailTargetForRecipient,getQuotaEntries,syncEmployeeIdentity,linkEmployeeDiscord} from './db.js';
+import db,{ upsertGuild, createRecruitment, setRecruitmentStatus, getApplications, getSetting, setSetting, audit, createLoginCode, invalidateLoginCodes,upsertEmployee,getEmployees,getPermissionsForDiscordRoles,getHierarchy,getRolePermissions,upsertPartnership,getPartnership,findMatchingPartnership,mergePartnershipRecords,getPartnershipByDiscordChannel,getTicketByDiscordChannel,createTicket,setTicketDiscordChannel,getAnnouncementRecipients,getPartnerships,createPrivateMail,getLatestMailTargetForRecipient,getQuotaEntries,syncEmployeeIdentity,linkEmployeeDiscord} from './db.js';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 export const client=new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMembers,GatewayIntentBits.GuildMessages,GatewayIntentBits.MessageContent]});
@@ -9,10 +9,30 @@ async function fetchTextChannel(guild,id){if(!id)return null;const ch=await guil
 const normRoleName=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
 const ADMIN_USER_IDS=(process.env.LS_CUSTOM_ADMIN_USER_IDS||'1375953709388927077').split(',').map(s=>String(s).trim()).filter(Boolean);
 export async function getMemberAccess(guildId,userId){
-  if(String(userId).startsWith('demo:')){
-    const employee=getEmployees(guildId).find(e=>String(e.user_id)===String(userId))||null;
+  const synthetic=String(userId||'');
+  if(synthetic.startsWith('demo:')||synthetic.startsWith('impersonate:')){
+    const employee=synthetic.startsWith('impersonate:')
+      ? getEmployees(guildId).find(e=>Number(e.id)===Number(synthetic.slice('impersonate:'.length)))||null
+      : getEmployees(guildId).find(e=>String(e.user_id)===synthetic)||null;
     if(!employee)return null;
-    return {memberId:String(userId),username:employee.username||'demo',displayName:employee.display_name||'Compte Démo',roleIds:[],roles:[],permissions:[],isAdmin:false,limited:true,employee};
+    if(synthetic.startsWith('demo:')){
+      return {memberId:synthetic,username:employee.username||'demo',displayName:employee.display_name||'Compte Démo',roleIds:[],roles:[],permissions:[],isAdmin:false,limited:true,employee};
+    }
+    const hierarchy=getHierarchy(guildId);
+    const role=hierarchy.find(r=>String(r.role_key)===String(employee.role_key))||null;
+    const permissions=[...new Set(getRolePermissions(guildId,employee.role_key||''))];
+    const isAdmin=['gerant_legal','developpeur_site'].includes(String(employee.role_key||'').toLowerCase());
+    return {
+      memberId:synthetic,
+      username:employee.username||'',
+      displayName:employee.display_name||employee.username||'Utilisateur',
+      roleIds:role?.discord_role_id?[String(role.discord_role_id)]:[],
+      roles:role?[{key:role.role_key,name:role.name,level:role.level,discordRoleId:role.discord_role_id}]:[],
+      permissions,
+      isAdmin,
+      limited:!isAdmin&&permissions.length===0,
+      employee
+    };
   }
   await waitForReady();
   const guild=client.guilds.cache.get(guildId)||await client.guilds.fetch(guildId).catch(()=>null);
