@@ -173,6 +173,10 @@ async function main(){
   const [fallbackStart,fallbackEnd]=localDate();
   let s=fallbackStart,e=fallbackEnd;
   try{
+    const saved=JSON.parse(localStorage.getItem('lscustom.quota.activePeriod')||'null');
+    if(saved?.start&&saved?.end){s=saved.start;e=saved.end;}
+  }catch{}
+  try{
     const active=await api('/api/employee/quotas/active');
     if(active.import?.period_start&&active.import?.period_end){s=active.import.period_start;e=active.import.period_end;}
   }catch{}
