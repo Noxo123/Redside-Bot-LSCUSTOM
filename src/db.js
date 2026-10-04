@@ -180,6 +180,69 @@ export function setSetting(guildId,key,value){db.prepare('INSERT INTO settings(g
 export function getAuditLogs(guildId,limit=100){return db.prepare('SELECT * FROM audit_logs WHERE guild_id=? ORDER BY id DESC LIMIT ?').all(guildId,Math.min(Math.max(Number(limit)||100,1),500))}
 export function audit(guildId,actorId,action,details=''){db.prepare('INSERT INTO audit_logs(guild_id,actor_id,action,details,created_at) VALUES(?,?,?,?,?)').run(guildId,actorId,action,details,new Date().toISOString())}
 export function stats(guildId){return{recruitments:getRecruitments(guildId).length,open:getRecruitments(guildId,'open').length,applications:getApplications(guildId).length,pending:getApplications(guildId,'pending').length,accepted:getApplications(guildId,'accepted').length,rejected:getApplications(guildId,'rejected').length,tickets:getTickets(guildId).length,openTickets:getTickets(guildId,'open').length}}
+
+// LS CUSTOM OS — modules RH, notifications, sanctions et récompenses
+db.exec(`
+CREATE TABLE IF NOT EXISTS notifications (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ guild_id TEXT NOT NULL,
+ user_id TEXT,
+ type TEXT NOT NULL DEFAULT 'info',
+ title TEXT NOT NULL,
+ message TEXT NOT NULL,
+ link TEXT,
+ read_at TEXT,
+ created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(guild_id,user_id,read_at,created_at);
+CREATE TABLE IF NOT EXISTS employee_sanctions (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ guild_id TEXT NOT NULL,
+ employee_id INTEGER NOT NULL,
+ type TEXT NOT NULL,
+ reason TEXT NOT NULL,
+ starts_at TEXT NOT NULL,
+ ends_at TEXT,
+ created_by TEXT,
+ created_at TEXT NOT NULL,
+ FOREIGN KEY(employee_id) REFERENCES employees(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_sanctions_employee ON employee_sanctions(guild_id,employee_id,starts_at);
+CREATE TABLE IF NOT EXISTS badges (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ guild_id TEXT NOT NULL,
+ badge_key TEXT NOT NULL,
+ name TEXT NOT NULL,
+ description TEXT NOT NULL DEFAULT '',
+ icon TEXT NOT NULL DEFAULT '🏆',
+ UNIQUE(guild_id,badge_key)
+);
+CREATE TABLE IF NOT EXISTS employee_badges (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ guild_id TEXT NOT NULL,
+ employee_id INTEGER NOT NULL,
+ badge_id INTEGER NOT NULL,
+ awarded_at TEXT NOT NULL,
+ UNIQUE(employee_id,badge_id),
+ FOREIGN KEY(employee_id) REFERENCES employees(id) ON DELETE CASCADE,
+ FOREIGN KEY(badge_id) REFERENCES badges(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_employee_badges ON employee_badges(guild_id,employee_id);
+`);
+
+
+export function createNotification(d){const now=new Date().toISOString();const r=db.prepare('INSERT INTO notifications(guild_id,user_id,type,title,message,link,created_at) VALUES(?,?,?,?,?,?,?)').run(d.guildId,d.userId||null,d.type||'info',d.title,d.message,d.link||null,now);return db.prepare('SELECT * FROM notifications WHERE id=?').get(r.lastInsertRowid)}
+export function getNotifications(guildId,userId,limit=50){return db.prepare("SELECT * FROM notifications WHERE guild_id=? AND (user_id IS NULL OR user_id=?) ORDER BY id DESC LIMIT ?").all(guildId,userId,Math.min(Math.max(Number(limit)||50,1),100))}
+export function markNotificationRead(id,guildId,userId){const r=db.prepare('UPDATE notifications SET read_at=? WHERE id=? AND guild_id=? AND (user_id IS NULL OR user_id=?)').run(new Date().toISOString(),id,guildId,userId);return r.changes>0}
+export function createSanction(d){const now=new Date().toISOString();const r=db.prepare('INSERT INTO employee_sanctions(guild_id,employee_id,type,reason,starts_at,ends_at,created_by,created_at) VALUES(?,?,?,?,?,?,?,?)').run(d.guildId,d.employeeId,d.type,d.reason,d.startsAt||now,d.endsAt||null,d.createdBy||null,now);return db.prepare('SELECT * FROM employee_sanctions WHERE id=?').get(r.lastInsertRowid)}
+export function getSanctions(guildId,employeeId=null){return employeeId?db.prepare('SELECT s.*,e.display_name,e.username FROM employee_sanctions s JOIN employees e ON e.id=s.employee_id WHERE s.guild_id=? AND s.employee_id=? ORDER BY s.id DESC').all(guildId,employeeId):db.prepare('SELECT s.*,e.display_name,e.username FROM employee_sanctions s JOIN employees e ON e.id=s.employee_id WHERE s.guild_id=? ORDER BY s.id DESC').all(guildId)}
+export function deleteSanction(id,guildId){return db.prepare('DELETE FROM employee_sanctions WHERE id=? AND guild_id=?').run(id,guildId).changes>0}
+export function ensureBadges(guildId){const base=[['quota_master','Quota Master','Objectif quota atteint','💎'],['top_performer','Top Performer','Meilleur montant de la période','🏆'],['repair_pro','Repair Pro','50 réparations cumulées','🔧'],['fourriere_pro','Fourrière Pro','25 fourrières cumulées','🚗'],['activity','Ultra Actif','100 interventions cumulées','⚡']];const ins=db.prepare('INSERT INTO badges(guild_id,badge_key,name,description,icon) VALUES(?,?,?,?,?) ON CONFLICT(guild_id,badge_key) DO UPDATE SET name=excluded.name,description=excluded.description,icon=excluded.icon');for(const b of base)ins.run(guildId,...b);return db.prepare('SELECT * FROM badges WHERE guild_id=? ORDER BY id').all(guildId)}
+export function getBadges(guildId){return ensureBadges(guildId)}
+export function getEmployeeBadges(guildId){return db.prepare('SELECT eb.*,b.badge_key,b.name,b.description,b.icon,e.display_name FROM employee_badges eb JOIN badges b ON b.id=eb.badge_id JOIN employees e ON e.id=eb.employee_id WHERE eb.guild_id=? ORDER BY eb.awarded_at DESC').all(guildId)}
+export function awardBadge(guildId,employeeId,badgeKey){const badge=db.prepare('SELECT * FROM badges WHERE guild_id=? AND badge_key=?').get(guildId,badgeKey);if(!badge)return null;const now=new Date().toISOString();db.prepare('INSERT OR IGNORE INTO employee_badges(guild_id,employee_id,badge_id,awarded_at) VALUES(?,?,?,?)').run(guildId,employeeId,badge.id,now);return db.prepare('SELECT eb.*,b.badge_key,b.name,b.description,b.icon FROM employee_badges eb JOIN badges b ON b.id=eb.badge_id WHERE eb.guild_id=? AND eb.employee_id=? AND eb.badge_id=?').get(guildId,employeeId,badge.id)}
+export function organisationAnalytics(guildId,startDate,endDate){const period=getQuotaEntries(guildId,startDate,endDate);const employees=getEmployees(guildId);const totals=period.reduce((a,r)=>{for(const k of ['appels','reparations','fourrieres','personnalisations','factures','montant_fourrieres','montant_personnalisations','montant_factures'])a[k]=(a[k]||0)+(Number(r[k])||0);return a},{montant_total:0});totals.montant_total=totals.montant_fourrieres+totals.montant_personnalisations+totals.montant_factures;const ranking=period.map(r=>({...r,montant_total:(Number(r.montant_fourrieres)||0)+(Number(r.montant_personnalisations)||0)+(Number(r.montant_factures)||0)})).sort((a,b)=>b.montant_total-a.montant_total);return{period:{startDate,endDate},employees:employees.length,activeEmployees:employees.filter(e=>e.status==='active').length,totals,ranking}}
+
 export default db;
 
 export function createLoginLink(d){const now=new Date().toISOString();db.prepare('UPDATE login_links SET revoked_at=? WHERE guild_id=? AND user_id=? AND revoked_at IS NULL').run(now,d.guildId,d.userId);const r=db.prepare('INSERT INTO login_links(guild_id,user_id,token_hash,created_at,expires_at,created_by) VALUES(?,?,?,?,?,?)').run(d.guildId,d.userId,d.tokenHash,now,new Date(Date.now()+30*86400000).toISOString(),d.createdBy||null);return db.prepare('SELECT * FROM login_links WHERE id=?').get(r.lastInsertRowid)}
