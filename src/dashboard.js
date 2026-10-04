@@ -82,6 +82,7 @@ function safePaymentProofPath(filePath){
 }
 app.use(express.json({limit:'1mb'}));
 app.use(express.urlencoded({extended:true}));
+app.get('/manifest.webmanifest',(req,res)=>res.type('application/manifest+json').sendFile(path.resolve('public/manifest.webmanifest')));
 app.use(express.static('public'));
 app.get('/uploads/:name',(req,res)=>{
   const raw=String(req.params.name||''),name=path.basename(raw);
