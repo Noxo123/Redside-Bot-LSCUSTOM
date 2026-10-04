@@ -175,11 +175,22 @@ app.post('/api/developer/impersonation/start/:id',playerAuth,async(req,res)=>{
 app.post('/api/developer/impersonation/stop',playerAuth,async(req,res)=>{
  try{
   const imp=req.session.impersonation;
-  if(!imp?.originalPlayer)return res.status(400).json({error:'Aucune session utilisateur à fermer.'});
-  const current=req.session.player;
-  req.session.player=imp.originalPlayer;delete req.session.impersonation;
-  req.session.save(err=>{if(err)return res.status(500).json({error:'Impossible de restaurer la session développeur.'});audit(req.session.player.guildId,req.session.player.id,'developer.impersonation.stopped',JSON.stringify({targetId:current?.id||imp.targetId,targetEmployeeId:imp.targetEmployeeId}));res.json({ok:true,redirect:'/developpeur'})});
- }catch(e){console.error('Arrêt impersonation:',e);res.status(500).json({error:'Impossible de restaurer la session développeur.'})}
+  if(!imp?.originalPlayer||!imp.developerOnly)return res.status(400).json({error:'Aucune session développeur à restaurer.'});
+  const current={...req.session.player};
+  const original={...imp.originalPlayer};
+  req.session.regenerate(err=>{
+    if(err)return res.status(500).json({error:'Impossible de sécuriser la restauration de session.'});
+    req.session.player=original;
+    req.session.save(saveErr=>{
+      if(saveErr)return res.status(500).json({error:'Impossible de restaurer la session développeur.'});
+      audit(original.guildId,original.id,'developer.impersonation.stopped',JSON.stringify({targetId:current?.id||imp.targetId,targetEmployeeId:imp.targetEmployeeId,sessionRotated:true}));
+      res.json({ok:true,redirect:'/developpeur'});
+    });
+  });
+ }catch(e){
+  console.error('Arrêt impersonation:',e);
+  res.status(500).json({error:'Impossible de restaurer la session développeur.'});
+ }
 });
 app.post('/auth/player/logout',(req,res)=>{req.session.destroy(()=>{res.setHeader('Clear-Site-Data','"cache"');res.json({ok:true})})});
 app.get('/api/public/me',(req,res)=>res.json({user:req.session.player||null}));
