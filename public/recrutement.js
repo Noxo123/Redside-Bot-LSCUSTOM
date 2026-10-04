@@ -72,7 +72,7 @@ function render(){
  $('#quotaSearch').oninput=e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.quota-table tbody tr[data-name]').forEach(tr=>tr.style.display=tr.dataset.name.toLowerCase().includes(q)?'':'none')};
  const historyToggle=$('#toggleImportHistory'),historyBody=$('#importHistoryBody'),historyChevron=$('#importHistoryChevron');if(historyToggle&&historyBody)historyToggle.onclick=()=>{const open=historyBody.classList.toggle('hidden');if(historyChevron)historyChevron.style.transform=open?'rotate(0deg)':'rotate(180deg)'};
  document.querySelectorAll('[data-import-period]').forEach(btn=>btn.onclick=()=>{const [start,end]=btn.dataset.importPeriod.split('|');load(start,end)});
- $('#copyPodium').onclick=async()=>{try{await navigator.clipboard.writeText(iframeCode);$('#copyPodium').textContent='✓ Iframe copié';setTimeout(()=>$('#copyPodium').textContent='Copier l\\'iframe',1800)}catch{alert('Impossible de copier automatiquement. Utilise le code affiché ci-dessous.')}};
+ $('#copyPodium').onclick=async()=>{try{await navigator.clipboard.writeText(iframeCode);$('#copyPodium').textContent='✓ Iframe copié';setTimeout(()=>$('#copyPodium').textContent='Copier l\'iframe',1800)}catch{alert('Impossible de copier automatiquement. Utilise le code affiché ci-dessous.')}};
  $('#imagePodium').onclick=async()=>{
    const btn=$('#imagePodium'),frame=document.querySelector('.podium-preview iframe');
    if(!frame)return;
