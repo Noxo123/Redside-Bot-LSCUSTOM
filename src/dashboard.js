@@ -5,7 +5,7 @@ import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import db,{getRecruitments,getRecruitment,createRecruitment,createApplication,hasRecentApplication,getApplicationsForUser,getSetting,setSetting,audit,getAuditLogs,createTicket,getTicket,getTicketsForUser,consumeLoginCode,createAbsence,getAbsences,getAbsencesForUser,deleteAbsence,getHierarchy,upsertHierarchyRole,deleteHierarchyRole,getEmployees,upsertEmployee,deleteEmployee,updateEmployeeProfile,linkEmployeeDiscord,unlinkEmployeeDiscord,getQuotaEntries,upsertQuota,purgeEmployees,getPartnerships,getPartnership,findMatchingPartnership,mergePartnershipRecords,upsertPartnership,getPartnershipByDiscordChannel,deletePartnership,createPartnershipAccess,getPartnershipByAccessHash,setPartnershipPaymentProof,clearPartnershipPaymentProof,organisationStats,setRolePermissions,purgeGuildData,syncEmployeeIdentity,updateRecruitment,countRecentApplicationsByIdentity,countSecurityAttempts,recordSecurityAttempt,createAnnouncement,getAnnouncements,markAnnouncementRead,deleteAnnouncement,getMailContacts,createPrivateMail,getMailConversations,getMailMessages,markMailConversationRead,saveQuotaImport,getQuotaImports,createLoginLink,getLoginLinkByHash,touchLoginLink,revokeLoginLink,getLoginAccounts,createNotification,getNotifications,markNotificationRead,createSanction,getSanctions,deleteSanction,getBadges,getEmployeeBadges,awardBadge,organisationAnalytics,getQuotaFollowup} from './db.js';
+import db,{getRecruitments,getRecruitment,createRecruitment,createApplication,hasRecentApplication,getApplicationsForUser,getSetting,setSetting,audit,getAuditLogs,createTicket,getTicket,getTicketsForUser,consumeLoginCode,createAbsence,getAbsences,getAbsencesForUser,deleteAbsence,getHierarchy,upsertHierarchyRole,deleteHierarchyRole,getEmployees,upsertEmployee,deleteEmployee,updateEmployeeProfile,linkEmployeeDiscord,unlinkEmployeeDiscord,getQuotaEntries,upsertQuota,purgeEmployees,getPartnerships,getPartnership,findMatchingPartnership,mergePartnershipRecords,upsertPartnership,getPartnershipByDiscordChannel,deletePartnership,createPartnershipAccess,getPartnershipByAccessHash,setPartnershipPaymentProof,clearPartnershipPaymentProof,organisationStats,setRolePermissions,purgeGuildData,syncEmployeeIdentity,updateRecruitment,countRecentApplicationsByIdentity,countSecurityAttempts,recordSecurityAttempt,createAnnouncement,getAnnouncements,markAnnouncementRead,deleteAnnouncement,getMailContacts,createPrivateMail,getMailConversations,getMailMessages,markMailConversationRead,saveQuotaImport,getQuotaImports,getQuotaImport,getActiveQuotaImport,getLatestQuotaImport,activateQuotaImport,createLoginLink,getLoginLinkByHash,touchLoginLink,revokeLoginLink,getLoginAccounts,createNotification,getNotifications,markNotificationRead,createSanction,getSanctions,deleteSanction,getBadges,getEmployeeBadges,awardBadge,organisationAnalytics,getQuotaFollowup} from './db.js';
 import {notifyWebsiteApplication,notifyWebsiteTicket,getMemberAccess,client,sendPartnershipPortalMessage,syncPartnershipProposalMessage,ensurePartnershipDiscordTicket,publishFromDashboard,sendDiscordPrivateMail,publishAnnouncementDiscord} from './bot.js';
 
 const app=express();
@@ -329,6 +329,8 @@ app.get('/api/employee/activity',playerAuth,async(req,res)=>{try{const g=req.ses
  if(String(req.body?.confirmation||'')!=='VIDER_QUOTAS')return res.status(400).json({error:'Confirmation invalide. Saisis VIDER_QUOTAS.'});
  const result=db.transaction(()=>{
   const quota=db.prepare('DELETE FROM quota_entries WHERE guild_id=?').run(g).changes;
+  db.prepare('DELETE FROM quota_import_snapshots WHERE import_id IN (SELECT id FROM quota_imports WHERE guild_id=?)').run(g);
+  db.prepare('DELETE FROM quota_active_periods WHERE guild_id=?').run(g);
   const imports=db.prepare('DELETE FROM quota_imports WHERE guild_id=?').run(g).changes;
   return {quota_entries:quota,quota_imports:imports};
  })();
@@ -336,6 +338,23 @@ app.get('/api/employee/activity',playerAuth,async(req,res)=>{try{const g=req.ses
  res.json({ok:true,result});
 }catch(e){console.error(e);res.status(500).json({error:'Impossible de vider les quotas.'})}});
 
+app.get('/api/employee/quotas/active',playerAuth,async(req,res)=>{try{
+ const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);
+ if(!a)return res.status(403).json({error:'Accès refusé.'});
+ const allowedRole=a.isAdmin||a.permissions.includes('activity_all')||a.permissions.includes('all');
+ if(!allowedRole)return res.status(403).json({error:'Accès RH requis.'});
+ const active=getActiveQuotaImport(g)||getLatestQuotaImport(g);
+ res.json({import:active||null});
+}catch(e){console.error(e);res.status(500).json({error:'Impossible de déterminer l’import RH actif.'})}});
+app.post('/api/employee/quotas/imports/:id/activate',playerAuth,async(req,res)=>{try{
+ const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);
+ if(!a)return res.status(403).json({error:'Accès refusé.'});
+ const allowedRole=a.isAdmin||a.permissions.includes('activity_all')||a.permissions.includes('all');
+ if(!allowedRole)return res.status(403).json({error:'Accès RH requis.'});
+ const result=activateQuotaImport(Number(req.params.id),g);
+ if(!result)return res.status(409).json({error:'Cette sauvegarde ne possède pas de snapshot restaurable.'});
+ res.json({ok:true,import:result});
+}catch(e){console.error('Activation import RH:',e);res.status(500).json({error:'Impossible de restaurer cette sauvegarde RH.'})}});
 app.get('/api/employee/quotas/imports',playerAuth,async(req,res)=>{try{
  const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);
  if(!a)return res.status(403).json({error:'Accès refusé.'});
@@ -405,7 +424,7 @@ app.post('/api/employee/quotas/import',playerAuth,async(req,res)=>{try{
  const actorName=req.session.player.display_name||req.session.player.global_name||req.session.player.username||'Utilisateur';
  const result=saveQuotaImport({guildId:g,periodStart:start,periodEnd:end,sourceText:raw,rows:normalized.map(row=>({name:row.name,appels:row.appels,reparations:row.reparations,fourrieres:row.fourrieres,personnalisations:row.personnalisations,factures:row.factures,montantFourrieres:row.montantFourrieres,montantPersonnalisations:row.montantPersonnalisations,montantFactures:row.montantFactures})),importedBy:req.session.player.id,importedByName:actorName,importedAt});
  if(result.duplicate)return res.status(409).json({error:'Ce relevé a déjà été importé pour cette période.',duplicate:true,import:result});
- res.status(201).json({ok:true,count:result.imported.length,created:result.created,imported:result.imported,errors,import:result});
+ activateQuotaImport(result.batchId,g); res.status(201).json({ok:true,count:result.imported.length,created:result.created,imported:result.imported,errors,import:result});
 }catch(e){console.error('Import RH:',e);res.status(500).json({error:'Impossible d’enregistrer l’import RH.'})}});
 app.get('/api/employee/team',playerAuth,async(req,res)=>{try{const a=await getMemberAccess(req.session.player.guildId,req.session.player.id);if(!a)return res.status(403).json({error:'Accès refusé.'});const admin=a.isAdmin||a.permissions.includes('team')||a.permissions.includes('all');if(!admin)return res.status(403).json({error:'Accès équipe refusé.'});res.json(getEmployees(req.session.player.guildId))}catch(e){res.status(500).json({error:'Impossible de charger l’équipe.'})}});
 
