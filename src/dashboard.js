@@ -341,8 +341,6 @@ app.get('/api/employee/activity',playerAuth,async(req,res)=>{try{const g=req.ses
 app.get('/api/employee/quotas/active',playerAuth,async(req,res)=>{try{
  const g=req.session.player.guildId,a=await getMemberAccess(g,req.session.player.id);
  if(!a)return res.status(403).json({error:'Accès refusé.'});
- const allowedRole=a.isAdmin||a.permissions.includes('activity_all')||a.permissions.includes('all');
- if(!allowedRole)return res.status(403).json({error:'Accès RH requis.'});
  const active=getActiveQuotaImport(g)||getLatestQuotaImport(g);
  res.json({import:active||null});
 }catch(e){console.error(e);res.status(500).json({error:'Impossible de déterminer l’import RH actif.'})}});
