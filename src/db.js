@@ -210,14 +210,6 @@ export function syncEmployeeIdentity({guildId,userId,username,displayName}){cons
 export function linkEmployeeDiscord({id,guildId,userId,username,displayName}){const now=new Date().toISOString();const conflict=db.prepare('SELECT id FROM employees WHERE guild_id=? AND user_id=? AND id<>?').get(guildId,userId,id);if(conflict)throw new Error('Ce compte Discord est déjà lié à une autre personne RP.');db.prepare('UPDATE employees SET user_id=?,discord_username=?,discord_display_name=?,updated_at=? WHERE id=? AND guild_id=?').run(userId,username||'',displayName||username||'',now,id,guildId);return getEmployee(id,guildId)}
 export function unlinkEmployeeDiscord({id,guildId}){const now=new Date().toISOString();db.prepare('UPDATE employees SET user_id=?,discord_username=NULL,discord_display_name=NULL,updated_at=? WHERE id=? AND guild_id=?').run('import:'+crypto.randomUUID(),now,id,guildId);return getEmployee(id,guildId)}
 export function deleteEmployee(id,guildId){const r=db.prepare('DELETE FROM employees WHERE id=? AND guild_id=?').run(id,guildId);return r.changes>0}
-export function clearQuotaData(guildId){
- const tx=db.transaction(()=>{
-  const quota=db.prepare('DELETE FROM quota_entries WHERE guild_id=?').run(guildId).changes;
-  const imports=db.prepare('DELETE FROM quota_imports WHERE guild_id=?').run(guildId).changes;
-  return {quota_entries:quota,quota_imports:imports};
- });
- return tx();
-}
 export function getQuotaEntries(guildId,startDate,endDate){const rows=db.prepare('SELECT q.*,e.user_id,e.username,e.display_name,e.role_key,h.name AS role_name,h.level AS role_level,e.quota_target,e.quota_enabled FROM quota_entries q JOIN employees e ON e.id=q.employee_id LEFT JOIN hierarchy_roles h ON h.guild_id=e.guild_id AND h.role_key=e.role_key WHERE q.guild_id=? AND q.period_start=? AND q.period_end=? ORDER BY COALESCE(h.level,-1) DESC,e.display_name,e.username').all(guildId,startDate,endDate);return rows}
 export function upsertQuota(d){
  ensureQuotaImportColumns();
