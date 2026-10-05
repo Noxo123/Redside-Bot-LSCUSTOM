@@ -11,7 +11,8 @@ body{overflow-x:hidden}.podium-shell{width:min(980px,100%);margin:auto;padding:3
 
 <style>
 .podium-shell{animation:podiumIn .6s ease both}.place{transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease}.place:hover{transform:translateY(-6px);border-color:rgba(212,160,23,.28);box-shadow:0 18px 45px rgba(0,0,0,.3)}.place.first:hover{box-shadow:0 20px 55px rgba(212,160,23,.12)}.medal{animation:medalFloat 3s ease-in-out infinite}.place:nth-child(2) .medal{animation-delay:.2s}.place:nth-child(3) .medal{animation-delay:.4s}@keyframes podiumIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}@keyframes medalFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}@media(prefers-reduced-motion:reduce){.medal{animation:none}}
-</style></head>
+</style><link rel="stylesheet" href="/ui/core/base.css?v=20261005-1"><link rel="stylesheet" href="/ui/podium/podium.css?v=20261005-1">
+</head>
 <body>
 <div class="podium-shell">
   <header class="podium-head"><div class="eyebrow">LS CUSTOM · REDSIDE RP</div><h1>🏆 PODIUM DE LA SEMAINE</h1><div id="period" class="period">Chargement…</div></header>
@@ -28,5 +29,6 @@ function label(v){return new Date(v+'T12:00:00').toLocaleDateString('fr-FR',{day
 async function load(){try{const [ws,we]=week();const params=new URLSearchParams({guild_id:q.get('guild_id')||'',start:q.get('start')||ws,end:q.get('end')||we});if(!params.get('guild_id'))params.delete('guild_id');const r=await fetch('/api/public/podium?'+params);const d=await r.json();if(!r.ok)throw Error(d.error||'Erreur');document.querySelector('#period').textContent='Semaine du '+label(d.start)+' au '+label(d.end);const medals=['🥇','🥈','🥉'];document.querySelector('#podium').innerHTML=d.rows.length?d.rows.map((x,i)=>'<article class="place '+(i===0?'first':'')+'"><div class="rank">#'+(i+1)+'</div><div class="medal">'+medals[i]+'</div><div class="name">'+esc(x.display_name)+'</div><div class="role">'+esc(x.role_name)+'</div><div class="score">'+fmt(x.actions)+' <small>actions</small></div><div class="stats"><span>Appels '+fmt(x.appels)+'</span><span>Réparations '+fmt(x.reparations)+'</span><span>Fourrières '+fmt(x.fourrieres)+'</span><span>Perso '+fmt(x.personnalisations)+'</span><span>Factures '+fmt(x.factures)+'</span></div></article>').join(''):'<div class="empty">Aucune activité enregistrée pour cette semaine.</div>'}catch(e){document.querySelector('#podium').innerHTML='<div class="empty">'+esc(e.message)+'</div>'}}
 load();
 </script>
+<script src="/ui/podium/podium.js?v=20261005-1"></script>
 </body>
 </html>
