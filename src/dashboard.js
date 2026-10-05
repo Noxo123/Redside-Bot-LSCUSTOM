@@ -499,7 +499,7 @@ app.post('/api/developer/settings',playerAuth,async(req,res)=>{
   const g=req.session.player.guildId;
   if(req.body?.guild_id&&clean(req.body.guild_id,30)!==g)return res.status(400).json({error:'Le serveur actif est celui de ta connexion Discord.'});
 
-  const required=['recruitment_channel','logs_channel','tickets_channel','ticket_category','partnership_category'];
+  const required=['recruitment_channel','logs_channel','tickets_channel','recruitment_category','ticket_category','partnership_category','applications_category'];
   const missing=required.filter(k=>!String(req.body?.[k]||'').trim());
   if(missing.length)return res.status(400).json({error:'Configuration Discord incomplète : '+missing.join(', ')+' requis.'});
 
