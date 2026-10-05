@@ -1,7 +1,15 @@
 (()=>{const path=location.pathname;const publicPage=['/connexion','/','/podium'].includes(path)||path.startsWith('/recrutement/');if(publicPage)return;
 const api=async(u,o)=>{const r=await fetch(u,{credentials:'same-origin',cache:'no-store',...o,headers:{'Cache-Control':'no-cache',...(o?.headers||{})}});const d=await r.json().catch(()=>({}));if((r.status===401||r.status===403)&&location.pathname!=='/connexion'){location.replace('/connexion');throw Error('Session expirée');}if(!r.ok)throw Error(d.error||'Erreur');return d};
-const links=[['/dashboard','⌂','LS CUSTOM — Tableau de bord'],
- ['/pilotage','◈','LS CUSTOM — Pilotage'],['/equipe','♙','LS CUSTOM — Équipe'],['/activite','▦','LS CUSTOM — Activité & quotas'],['/agenda','□','LS CUSTOM — Agenda RH'],['/annonces','◉','LS CUSTOM — Annonces'],['/messagerie','✉','LS CUSTOM — Messagerie'],['/partenariats','◇','LS CUSTOM — Partenariats'],['/developpeur','⚙','LS CUSTOM — Développeur']];
+const svg=(d)=>'<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="'+d+'"></path></svg>';
+const links=[['/dashboard',svg('M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z'),'LS CUSTOM — Tableau de bord'],
+ ['/pilotage',svg('M4 19V5h16v14H4Zm3-3h2v-5H7v5Zm4 0h2V7h-2v9Zm4 0h2v-7h-2v7Z'),'LS CUSTOM — Pilotage'],
+ ['/equipe',svg('M16 20v-1.5a4.5 4.5 0 0 0-4.5-4.5h-3A4.5 4.5 0 0 0 4 18.5V20m6-9a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm5-1a3 3 0 1 0 0-6m4 11v-1.5a4 4 0 0 0-2.5-3.7'),'LS CUSTOM — Équipe'],
+ ['/activite',svg('M4 19V5m0 14h16M8 16v-5m4 5V7m4 9v-3'),'LS CUSTOM — Activité & quotas'],
+ ['/agenda',svg('M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Zm3 8h3m-3 4h6'),'LS CUSTOM — Agenda RH'],
+ ['/annonces',svg('M4 5h16v12H8l-4 4V5Zm4 4h8m-8 4h5'),'LS CUSTOM — Annonces'],
+ ['/messagerie',svg('M4 5h16v12H8l-4 4V5Zm3 4h10m-10 3h7'),'LS CUSTOM — Messagerie'],
+ ['/partenariats',svg('M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1m3.1 5a5 5 0 0 0-7.1-.1l-2 2a5 5 0 0 0 7.1 7.1l1.1-1.1'),'LS CUSTOM — Partenariats'],
+ ['/developpeur',svg('M9 3h6l1 3 3 1v6l-3 1-1 3H9l-1-3-3-1V7l3-1 1-3Zm3 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z'),'LS CUSTOM — Développeur']];
 const perms={'/equipe':'team','/partenariats':'partnerships','/developpeur':'developer'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function shell(access,user){
