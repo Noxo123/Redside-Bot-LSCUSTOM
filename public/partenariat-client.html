@@ -10,6 +10,8 @@ body{background:#070708!important}.client-wrap{min-height:100vh;padding:32px;dis
 
 <style>
 .client-card{animation:clientIn .5s cubic-bezier(.2,.8,.2,1) both}.panel,.proposal-card{transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}.panel:hover{border-color:rgba(255,255,255,.1);box-shadow:0 15px 45px rgba(0,0,0,.16)}.proposal-card{box-shadow:0 20px 70px rgba(0,0,0,.18)}.proposal-card:hover{border-color:rgba(212,160,23,.32);transform:translateY(-2px)}.msg{animation:messageIn .25s ease both}.btn{transition:transform .18s ease,box-shadow .18s ease,background .18s ease}.btn:hover{transform:translateY(-1px)}.btn.gold:hover{box-shadow:0 8px 24px rgba(212,160,23,.2)}@keyframes clientIn{from{opacity:0;transform:translateY(12px) scale(.99)}to{opacity:1;transform:none}}@keyframes messageIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.msg{animation:none}}
-</style></head>
-<body><main class="client-wrap"><div class="client-nav"><a href="/partenariats">🤝 Partenariat</a><a href="/annonces">📢 Annonces</a><a href="/messagerie">✉️ Messagerie</a></div><div class="client-card"><div id="app"></div></div></main><script src="/partenariat-client.js?v=20260928-1"></script></body>
+</style><link rel="stylesheet" href="/ui/core/base.css?v=20261005-1"><link rel="stylesheet" href="/ui/partenariat-client/partenariat-client.css?v=20261005-1">
+</head>
+<body><main class="client-wrap"><div class="client-nav"><a href="/partenariats">🤝 Partenariat</a><a href="/annonces">📢 Annonces</a><a href="/messagerie">✉️ Messagerie</a></div><div class="client-card"><div id="app"></div></div></main><script src="/partenariat-client.js?v=20260928-1"></script><script src="/ui/partenariat-client/partenariat-client.js?v=20261005-1"></script>
+</body>
 </html>
