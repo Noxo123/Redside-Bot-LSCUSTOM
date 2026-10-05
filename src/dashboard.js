@@ -492,7 +492,48 @@ app.post('/api/developer/partnerships/purge',playerAuth,async(req,res)=>{try{con
 app.get('/api/developer/overview',playerAuth,async(req,res)=>{try{const a=await developerAccess(req);if(!a)return res.status(403).json({error:'Accès développeur réservé.'});const guildId=req.session.player.guildId,guild=client.guilds.cache.get(guildId)||await client.guilds.fetch(guildId).catch(()=>null);if(!guild)return res.status(404).json({error:'Serveur Discord introuvable.'});const channels=await guild.channels.fetch(),roles=await guild.roles.fetch(),config={};for(const key of DEVELOPER_SETTING_KEYS)config[key]=getSetting(guildId,key,'');config.guild_id=guildId;config.partnership_category=config.partnership_category||process.env.PARTNERSHIP_TICKET_CATEGORY_ID||'';res.json({guild:{id:guild.id,name:guild.name,icon:guild.iconURL?.({size:128})||null},config,channels:[...channels.values()].filter(Boolean).map(c=>({id:c.id,name:c.name,type:c.type,parentId:c.parentId||null})).sort((x,y)=>String(x.name).localeCompare(String(y.name))),roles:[...roles.values()].filter(r=>!r.managed).map(r=>({id:r.id,name:r.name,color:r.hexColor,position:r.position,mentionable:r.mentionable})).sort((x,y)=>y.position-x.position),hierarchy:getHierarchy(guildId),employees:getEmployees(guildId),audit:getAuditLogs(guildId,50),recruitments:getRecruitments(guildId),canDeleteData:!!(a.isAdmin||a.permissions.includes('data_delete')||a.permissions.includes('all')),permissionsCatalog:['all','team','activity_all','partnerships','recruitments','applications','tickets','settings','audit','data_delete']})}catch(e){console.error(e);res.status(500).json({error:'Impossible de charger le centre développeur.'})}});
 app.post('/api/developer/recruitments',playerAuth,async(req,res)=>{try{const a=await developerAccess(req);if(!a)return res.status(403).json({error:'Accès développeur réservé.'});const g=req.session.player.guildId;const title=clean(req.body.title,120),description=clean(req.body.description,3000),imageUrl=clean(req.body.image_url,500);if(!title||!description)return res.status(400).json({error:'Titre et description obligatoires.'});let questions=Array.isArray(req.body.questions)?req.body.questions:[];questions=questions.map((q,n)=>({key:clean(q.key,40)||`question_${n+1}`,label:clean(q.label,180),type:['text','textarea','number','select'].includes(q.type)?q.type:'textarea',required:q.required!==false,options:Array.isArray(q.options)?q.options.map(x=>clean(x,100)).filter(Boolean).slice(0,20):[]})).filter(q=>q.label).slice(0,20);const r=createRecruitment({guildId:g,title,description,imageUrl,createdBy:req.session.player.id,questions});let published=false;if(req.body.publish===true){try{await publishFromDashboard(g,r);published=true}catch(e){console.error('Publication recrutement:',e.message)}}audit(g,req.session.player.id,'recruitment.created',String(r.id));res.status(201).json({ok:true,recruitment:r,published})}catch(e){console.error(e);res.status(500).json({error:'Impossible de créer le recrutement.'})}});
 app.put('/api/developer/recruitments/:id',playerAuth,async(req,res)=>{try{const a=await developerAccess(req);if(!a)return res.status(403).json({error:'Accès développeur réservé.'});const g=req.session.player.guildId,r=getRecruitment(Number(req.params.id),g);if(!r)return res.status(404).json({error:'Recrutement introuvable.'});const title=clean(req.body.title,120),description=clean(req.body.description,3000),imageUrl=clean(req.body.image_url,500);if(!title||!description)return res.status(400).json({error:'Titre et description obligatoires.'});const questions=Array.isArray(req.body.questions)?req.body.questions:[];const u=updateRecruitment(r.id,g,{title,description,imageUrl,questions});audit(g,req.session.player.id,'recruitment.updated',String(r.id));res.json({ok:true,recruitment:u})}catch(e){console.error(e);res.status(500).json({error:'Impossible de modifier le recrutement.'})}});
-app.post('/api/developer/settings',playerAuth,async(req,res)=>{try{const a=await developerAccess(req);if(!a)return res.status(403).json({error:'Accès développeur réservé.'});const g=req.session.player.guildId;for(const key of DEVELOPER_SETTING_KEYS)if(Object.prototype.hasOwnProperty.call(req.body,key))setSetting(g,key,clean(req.body[key],100));if(req.body.guild_id&&clean(req.body.guild_id,30)!==g)return res.status(400).json({error:'Le serveur actif est celui de ta connexion Discord.'});audit(g,req.session.player.id,'developer.settings.updated',DEVELOPER_SETTING_KEYS.filter(k=>Object.prototype.hasOwnProperty.call(req.body,k)).join(','));res.json({ok:true})}catch(e){console.error(e);res.status(500).json({error:'Impossible d’enregistrer la configuration.'})}});
+app.post('/api/developer/settings',playerAuth,async(req,res)=>{
+ try{
+  const a=await developerAccess(req);
+  if(!a)return res.status(403).json({error:'Accès développeur réservé.'});
+  const g=req.session.player.guildId;
+  if(req.body?.guild_id&&clean(req.body.guild_id,30)!==g)return res.status(400).json({error:'Le serveur actif est celui de ta connexion Discord.'});
+
+  const required=['recruitment_channel','logs_channel','tickets_channel','ticket_category','partnership_category'];
+  const missing=required.filter(k=>!String(req.body?.[k]||'').trim());
+  if(missing.length)return res.status(400).json({error:'Configuration Discord incomplète : '+missing.join(', ')+' requis.'});
+
+  const roleKeys=['developer_role','gerant_legal_role','direction_role','chef_equipe_role','rh_role','employee_role'];
+  const roleValues=roleKeys.map(k=>String(req.body?.[k]||'').trim()).filter(Boolean);
+  if(new Set(roleValues).size!==roleValues.length)return res.status(400).json({error:'Chaque rôle Discord doit avoir un ID différent (Développeur, Direction, RH, Chef d’équipe, etc.).'});
+
+  const guild=client.guilds.cache.get(g)||await client.guilds.fetch(g).catch(()=>null);
+  if(!guild)return res.status(503).json({error:'Serveur Discord indisponible.'});
+  const channels=await guild.channels.fetch();
+  const roles=await guild.roles.fetch();
+
+  for(const key of required){
+   const id=String(req.body[key]);
+   const item=channels.get(id);
+   if(!item)return res.status(400).json({error:'La configuration « '+key+' » pointe vers un salon/catégorie inexistant.'});
+   if(key.includes('category')&&item.type!==4)return res.status(400).json({error:'« '+key+' » doit être une catégorie Discord.'});
+   if(key.includes('channel')&&item.type===4)return res.status(400).json({error:'« '+key+' » doit être un salon Discord et non une catégorie.'});
+  }
+  for(const key of roleKeys){
+   const id=String(req.body?.[key]||'');
+   if(id&&!roles.has(id))return res.status(400).json({error:'Le rôle Discord configuré pour « '+key+' » est introuvable.'});
+  }
+
+  for(const key of DEVELOPER_SETTING_KEYS){
+   if(Object.prototype.hasOwnProperty.call(req.body,key))setSetting(g,key,clean(req.body[key],100));
+  }
+  audit(g,req.session.player.id,'developer.settings.updated',DEVELOPER_SETTING_KEYS.filter(k=>Object.prototype.hasOwnProperty.call(req.body,k)).join(','));
+  res.json({ok:true});
+ }catch(e){
+  console.error(e);
+  res.status(500).json({error:e?.message||'Impossible d’enregistrer la configuration.'});
+ }
+});
 app.get('/api/developer/hierarchy',playerAuth,async(req,res)=>{try{const a=await developerAccess(req);if(!a)return res.status(403).json({error:'Accès développeur réservé.'});res.json(getHierarchy(req.session.player.guildId))}catch(e){console.error('Erreur GET /api/developer/hierarchy:',e);res.status(500).json({error:'Impossible de charger les rôles et permissions.'})}});
 app.post('/api/developer/hierarchy',playerAuth,async(req,res)=>{try{const a=await developerAccess(req);if(!a)return res.status(403).json({error:'Accès développeur réservé.'});const g=req.session.player.guildId,roleKey=clean(req.body.role_key,50).toLowerCase().replace(/[^a-z0-9_-]/g,'_'),name=clean(req.body.name,100);if(!roleKey||!name)return res.status(400).json({error:'Clé et nom obligatoires.'});const r=upsertHierarchyRole({guildId:g,roleKey,name,level:Number(req.body.level)||0,discordRoleId:clean(req.body.discord_role_id,30),color:clean(req.body.color,20),description:clean(req.body.description,300)});const permissions=Array.isArray(req.body.permissions)?req.body.permissions.filter(x=>typeof x==='string').slice(0,30):[];setRolePermissions(g,roleKey,permissions);audit(g,req.session.player.id,'developer.hierarchy.updated',JSON.stringify({id:r.id,roleKey,permissions}));res.json({...r,permissions})}catch(e){console.error(e);res.status(500).json({error:'Impossible de modifier ce rôle.'})}});
 app.delete('/api/developer/hierarchy/:id',playerAuth,async(req,res)=>{try{const a=await developerAccess(req);if(!a)return res.status(403).json({error:'Accès développeur réservé.'});const g=req.session.player.guildId;if(!deleteHierarchyRole(Number(req.params.id),g))return res.status(404).json({error:'Rôle introuvable.'});audit(g,req.session.player.id,'developer.hierarchy.deleted',req.params.id);res.json({ok:true})}catch(e){res.status(500).json({error:'Impossible de supprimer ce rôle.'})}});
