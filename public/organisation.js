@@ -3,7 +3,7 @@ const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const money=v=>'$ '+Number(v||0).toLocaleString('fr-FR');
 const week=()=>{const d=new Date();d.setHours(12,0,0,0);const day=d.getDay()||7;d.setDate(d.getDate()-day+1);const s=d.toISOString().slice(0,10);d.setDate(d.getDate()+6);return[s,d.toISOString().slice(0,10)]};
-const roleLabel=r=>r?.role_name||r?.roleKey||'Sans rôle';
+const roleLabel=r=>{const label=r?.role_name||r?.roleKey||r?.role_key||r?.discord_role_name;return label&&String(label).trim()?String(label).trim():'Employé'};
 const statusLabel=s=>({active:'Actif',trial:'Période d’essai',leave:'En absence',inactive:'Inactif'}[s]||s||'Actif');
 const stat=(label,value,detail,icon)=>`<article class="dash-stat"><div class="dash-stat-icon">${icon}</div><div><span>${label}</span><strong>${value}</strong><small>${detail}</small></div></article>`;
 const empty=(title,text)=>`<div class="dash-empty"><strong>${title}</strong><span>${text}</span></div>`;
