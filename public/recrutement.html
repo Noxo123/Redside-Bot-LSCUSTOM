@@ -1,1 +1,85 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#050505"><meta name="color-scheme" content="dark"><title>LS CUSTOM — Activité & quotas</title><link rel="stylesheet" href="/ui/activite/activite.css?v=20261006-mono"><link rel="stylesheet" href="/ui/recrutement/recrutement.css?v=20261006-mono"><link rel="stylesheet" href="/ls-custom-theme.css?v=20261006-mono"><link rel="stylesheet" href="/ui/core/base.css?v=20261006-mono"></head><body class="ls-page ls-page--recrutement"><div class="ls-shell"><main class="ls-activity-main"><div class="ls-activity-container"><header class="activity-hero"><div><span class="activity-eyebrow">RESSOURCES HUMAINES · PERFORMANCE</span><h1>Activité & quotas</h1><p>Suivi des interventions, objectifs individuels et historiques d’imports.</p></div><div class="activity-hero-meta"><span id="periodBadgeHero">—</span><span class="activity-live"><i></i> Données synchronisées</span></div></header><section id="actions" class="activity-actions"></section><section id="content" aria-live="polite" aria-busy="true"><div class="activity-loading"><div class="activity-spinner"></div><strong>Chargement de l’activité…</strong><span>Récupération de la période active et des relevés RH.</span></div></section></div></main></div><script src="/ui/activite/activite.js?v=20261006-mono" defer></script><script src="/ls-custom-app.js?v=20261006-mono" defer></script><script src="/ui/recrutement/recrutement.js?v=20261006-mono" defer></script></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="LS CUSTOM — Centre de gestion, activité et quotas RH">
+<title>LS CUSTOM — Activité & quotas</title>
+<link rel="stylesheet" href="/ls-custom-theme.css?v=20261004-3">
+<link rel="stylesheet" href="/ui/core/base.css?v=20261006-1">
+<link rel="stylesheet" href="/ui/activite/activite.css?v=20261006-2"></head>
+<body class="ls-page ls-page--recrutement">
+<div class="ls-shell">
+  <aside class="ls-app-sidebar" aria-label="Navigation principale">
+    <div class="ls-sidebar-inner">
+      <a class="ls-sidebar-brand" href="/dashboard" aria-label="Retour au tableau de bord">
+        <span class="ls-sidebar-logo">LS</span>
+        <span>
+          <strong>LS CUSTOM</strong>
+          <small>CENTRE DE GESTION</small>
+        </span>
+        <span class="ls-sidebar-status" title="État de la plateforme"><i></i>ONLINE</span>
+      </a>
+
+      <div id="user" class="ls-sidebar-user" aria-label="Utilisateur connecté">
+        <span class="ls-sidebar-avatar" aria-hidden="true">LS</span>
+        <span class="ls-sidebar-user-copy"><strong>Chargement…</strong><small>SESSION SÉCURISÉE</small></span>
+      </div>
+
+      <div class="ls-sidebar-section-label">Navigation</div>
+      <nav class="ls-sidebar-nav">
+        <a href="/dashboard"><span class="dock-icon">⌂</span><span class="ls-nav-label">Tableau de bord</span></a>
+        <a href="/equipe"><span class="dock-icon">♙</span><span class="ls-nav-label">Équipe</span></a>
+        <a href="/activite" class="is-active" aria-current="page"><span class="dock-icon">◫</span><span class="ls-nav-label">Activité & quotas</span></a>
+        <a href="/agenda"><span class="dock-icon">□</span><span class="ls-nav-label">Agenda RH</span></a>
+        <a href="/annonces"><span class="dock-icon">◈</span><span class="ls-nav-label">Annonces</span></a>
+        <a href="/messagerie"><span class="dock-icon">✉</span><span class="ls-nav-label">Messagerie</span></a>
+        <a href="/partenariats"><span class="dock-icon">◇</span><span class="ls-nav-label">Partenariats</span></a>
+        <a id="developerNav" class="hidden" href="/developpeur"><span class="dock-icon">⚙</span><span class="ls-nav-label">Développeur</span></a>
+      </nav>
+
+      <div class="ls-sidebar-spacer"></div>
+      <button id="logout" class="ls-btn ls-btn-secondary" type="button">Déconnexion</button>
+    </div>
+  </aside>
+
+  <main class="ls-activity-main">
+    <div class="ls-topbar">
+      <div class="ls-context">
+        <span class="ls-context-page">Activité & quotas</span>
+        <span class="ls-context-clock" id="activityClock">—</span>
+        <span class="ls-server-state"><i></i> SYSTÈME EN LIGNE</span>
+      </div>
+      <div class="ls-context"><span id="periodBadge" class="activity-period-badge">PÉRIODE ACTIVE · —</span></div>
+    </div>
+
+    <div class="ls-activity-container">
+      <header class="activity-hero" data-motion="hero">
+        <div>
+          <div class="activity-eyebrow">RESSOURCES HUMAINES · PERFORMANCE</div>
+          <h1>Activité & quotas</h1>
+          <p>Suivi consolidé des interventions, objectifs individuels et historiques d’imports.</p>
+        </div>
+        <div class="activity-hero-meta">
+          <span id="periodBadgeHero">—</span>
+          <span class="activity-live"><i></i> Données synchronisées</span>
+        </div>
+      </header>
+
+      <section id="actions" class="activity-actions" aria-label="Actions"></section>
+
+      <div id="content" aria-live="polite" aria-busy="true">
+        <div class="activity-loading" role="status">
+          <div class="activity-spinner" aria-hidden="true"></div>
+          <strong>Chargement de l’activité…</strong>
+          <span>Récupération de la période active et des relevés RH.</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/ui/activite/activite.js?v=20261006-1" defer></script>
+<script src="/ls-custom-app.js?v=20261006-1" defer></script></body>
+</html>
