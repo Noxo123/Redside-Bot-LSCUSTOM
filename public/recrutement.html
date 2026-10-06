@@ -1,3 +1,56 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LS CUSTOM — Activité &amp; quotas</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="/ls-custom-theme.css?v=20261004-3"><script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','ui-sans-serif','system-ui']}}}}</script><link rel="stylesheet" href="/ui/core/base.css?v=20261005-1"><link rel="stylesheet" href="/ui/recrutement/recrutement.css?v=20261005-1">
-</head><body class="min-h-screen bg-[#050505] font-sans text-zinc-200 antialiased"><div class="min-h-screen lg:grid lg:grid-cols-[250px_1fr]"><aside class="border-b border-zinc-800 bg-[#090909] lg:min-h-screen lg:border-b-0 lg:border-r"><div class="flex h-full flex-col p-5"><div class="mb-8"><div class="font-bold text-white">LS CUSTOM</div><div class="text-xs text-zinc-600">Redside RP · Activité</div></div><div id="user" class="mb-5 rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-sm"></div><nav class="grid gap-1.5"><a class="rounded-xl px-3 py-2.5 text-sm text-zinc-500 hover:bg-zinc-900 hover:text-white" href="/dashboard">⌂ <span class="ml-2">LS CUSTOM — Tableau de bord</span></a><a class="rounded-xl px-3 py-2.5 text-sm text-zinc-500 hover:bg-zinc-900 hover:text-white" href="/equipe">👥 <span class="ml-2">LS CUSTOM — Équipe</span></a><a class="rounded-xl border border-zinc-700 bg-zinc-800/70 px-3 py-2.5 text-sm font-semibold text-white" href="/activite">📊 <span class="ml-2">LS CUSTOM — Activité & quotas</span></a><a class="rounded-xl px-3 py-2.5 text-sm text-zinc-500 hover:bg-zinc-900 hover:text-white" href="/partenariats">🤝 <span class="ml-2">LS CUSTOM — Partenariats</span></a><a id="developerNav" class="hidden rounded-xl px-3 py-2.5 text-sm text-zinc-500 hover:bg-zinc-900 hover:text-white" href="/developpeur">⚙️ <span class="ml-2">LS CUSTOM — Développeur</span></a></nav><button id="logout" class="mt-8 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-400 hover:border-zinc-600 hover:text-white lg:mt-auto">Déconnexion</button></div></aside><main class="min-w-0 p-5 md:p-8"><div class="mx-auto max-w-[1500px]"><div class="mb-8"><div class="text-[11px] font-bold tracking-[.25em] text-zinc-600">RESSOURCES HUMAINES</div><div class="flex flex-wrap items-end justify-between gap-4"><div><h1 class="mt-2 text-3xl font-bold text-white">LS CUSTOM — Activité & quotas</h1><p class="mt-2 text-sm text-zinc-500">Toutes les interventions de l'équipe, période par période.</p></div><div id="actions" class="quota-actions"></div></div><div id="content"></div></div></main></div><script src="/recrutement.js?v=20261005-2"></script><script src="/ls-custom-app.js?v=20261005-2"></script><script src="/ui/recrutement/recrutement.js?v=20261005-1"></script>
-</body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#050506">
+<title>LS CUSTOM — Activité & quotas</title>
+<link rel="stylesheet" href="/ls-custom-theme.css?v=20261004-3">
+<link rel="stylesheet" href="/ui/core/base.css?v=20261005-1">
+<link rel="stylesheet" href="/ui/activite/activite.css?v=20261006-1">
+</head>
+<body class="min-h-screen bg-[#050505] text-zinc-200 antialiased">
+<div class="min-h-screen lg:grid lg:grid-cols-[270px_1fr]">
+  <aside class="border-b border-zinc-800 bg-[#090909] lg:min-h-screen lg:border-b-0 lg:border-r">
+    <div class="flex h-full flex-col p-5">
+      <div class="mb-8"><div class="font-bold text-white">LS CUSTOM</div><div class="text-xs text-zinc-600">Centre de gestion · Activité</div></div>
+      <div id="user" class="mb-5 rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-sm"></div>
+      <nav class="grid gap-1.5" aria-label="Navigation principale">
+        <a href="/dashboard">⌂ <span class="ml-2">Tableau de bord</span></a>
+        <a href="/equipe">👥 <span class="ml-2">Équipe</span></a>
+        <a href="/activite" aria-current="page">📊 <span class="ml-2">Activité & quotas</span></a>
+        <a href="/agenda">📅 <span class="ml-2">Agenda RH</span></a>
+        <a href="/annonces">📢 <span class="ml-2">Annonces</span></a>
+        <a href="/messagerie">✉️ <span class="ml-2">Messagerie</span></a>
+        <a href="/partenariats">🤝 <span class="ml-2">Partenariats</span></a>
+        <a id="developerNav" class="hidden" href="/developpeur">⚙️ <span class="ml-2">Développeur</span></a>
+      </nav>
+      <button id="logout" class="mt-8 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-400 lg:mt-auto">Déconnexion</button>
+    </div>
+  </aside>
+
+  <main class="min-w-0">
+    <div class="mx-auto max-w-[1500px] px-5 pb-16 md:px-8">
+      <header class="activity-hero">
+        <div>
+          <div class="activity-eyebrow">RESSOURCES HUMAINES · PERFORMANCE</div>
+          <h1>Activité & quotas</h1>
+          <p>Suivi consolidé des interventions, objectifs individuels et historiques d’imports.</p>
+        </div>
+        <div class="activity-hero-meta">
+          <span id="periodBadge">—</span>
+          <span class="activity-live"><i></i> Données synchronisées</span>
+        </div>
+      </header>
+
+      <div id="actions" class="activity-actions"></div>
+      <div id="content" aria-live="polite">
+        <div class="activity-loading"><div class="activity-spinner"></div><strong>Chargement de l’activité…</strong><span>Récupération de la période active et des relevés RH.</span></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/ui/activite/activite.js?v=20261006-1"></script>
+<script src="/ls-custom-app.js?v=20261006-1"></script>
+</body>
+</html>
