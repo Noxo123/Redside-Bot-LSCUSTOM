@@ -766,3 +766,53 @@
   to{opacity:1;transform:none}
 }
 @keyframes activitySpin{to{transform:rotate(360deg)}}
+
+/* =========================================================
+   LS CUSTOM — MOTION LAYER / RESET 2026-10
+   ========================================================= */
+.ls-activity-page{overflow-x:hidden}
+.ls-activity-main{min-width:0}
+.ls-activity-container{width:min(1500px,100%);margin:0 auto;padding:0 32px 72px}
+.activity-period-badge{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border:1px solid rgba(245,200,66,.16);border-radius:999px;background:rgba(245,200,66,.035);color:#c9aa55;font:700 8px "JetBrains Mono",monospace;letter-spacing:.4px}
+.activity-hero[data-motion=hero]{animation:activityHeroIn .55s cubic-bezier(.22,1,.36,1) both}
+.quota-kpi,.podium-workspace,#content>section.mb-6.rounded-2xl,.quota-table-wrap{animation:activityReveal .55s cubic-bezier(.22,1,.36,1) both}
+.quota-command-center .quota-kpi:nth-child(2){animation-delay:.04s}.quota-command-center .quota-kpi:nth-child(3){animation-delay:.08s}.quota-command-center .quota-kpi:nth-child(4){animation-delay:.12s}.quota-command-center .quota-kpi:nth-child(5){animation-delay:.16s}.quota-command-center .quota-kpi:nth-child(6){animation-delay:.20s}.quota-command-center .quota-kpi:nth-child(7){animation-delay:.24s}.quota-command-center .quota-kpi:nth-child(8){animation-delay:.28s}
+.activity-actions .quota-btn{animation:activityActionIn .35s cubic-bezier(.22,1,.36,1) both}
+.activity-actions .quota-btn:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(212,160,23,.12)}
+.quota-progress i,.quota-kpi-progress i{animation:activityProgress .9s cubic-bezier(.22,1,.36,1) both}
+.quota-table tbody tr{animation:activityRowIn .32s ease both}
+.quota-table tbody tr:nth-child(2){animation-delay:.02s}.quota-table tbody tr:nth-child(3){animation-delay:.04s}.quota-table tbody tr:nth-child(4){animation-delay:.06s}.quota-table tbody tr:nth-child(5){animation-delay:.08s}.quota-table tbody tr:nth-child(6){animation-delay:.10s}
+.quota-modal{animation:activityBackdrop .2s ease both}
+.quota-dialog{animation:activityDialogIn .35s cubic-bezier(.22,1,.36,1) both}
+.ui-error{display:grid;gap:8px}
+.ui-error button{justify-self:start}
+.activity-loading{min-height:240px;display:grid;place-items:center;align-content:center;gap:8px;padding:32px;border:1px dashed rgba(255,255,255,.10);border-radius:12px;background:rgba(255,255,255,.012);color:#77726b;text-align:center;animation:activityReveal .4s ease both}
+.activity-loading strong{color:#d8d3cc;font-size:13px}.activity-loading span{font-size:10px;color:#5f5b55}
+.activity-spinner{width:24px;height:24px;border:2px solid rgba(245,200,66,.14);border-top-color:#f5c842;border-radius:50%;animation:activitySpin .8s linear infinite}
+@keyframes activityHeroIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+@keyframes activityReveal{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes activityActionIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes activityProgress{from{width:0!important}}
+@keyframes activityRowIn{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:none}}
+@keyframes activityBackdrop{from{opacity:0}to{opacity:1}}
+@keyframes activityDialogIn{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@media(max-width:900px){
+ .ls-activity-container{padding:0 16px 90px}
+ .activity-hero{align-items:flex-start;flex-direction:column;padding:22px 0 18px}
+ .activity-hero-meta{justify-content:flex-start}
+ .quota-command-center{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .quota-kpi-hero{grid-column:1/-1;grid-row:auto;min-height:190px}
+ .podium-workspace-head{flex-direction:column}
+ .activity-actions{justify-content:flex-start}
+}
+@media(max-width:560px){
+ .quota-command-center{grid-template-columns:1fr}
+ .quota-kpi-hero{grid-column:auto}
+ .activity-hero h1{font-size:36px!important}
+ .activity-hero-meta{width:100%;justify-content:flex-start}
+ .activity-hero-meta>span{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+ .quota-dialog{max-height:calc(100vh - 24px);border-radius:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ .activity-hero,.quota-kpi,.podium-workspace,#content>section.mb-6.rounded-2xl,.quota-table-wrap,.activity-actions .quota-btn,.quota-table tbody tr,.quota-progress i,.quota-kpi-progress i{animation:none!important}
+}
