@@ -156,7 +156,7 @@ async function clearQuotas(){
   btn.textContent='✓ Quotas vidés';
   await load(state.start,state.end);
   window.LSUI?.toast('Quotas vidés : '+Number(r.result?.quota_entries||0)+' relevé(s) et '+Number(r.result?.quota_imports||0)+' import(s) supprimé(s).','success','Quotas');
- }catch(e){btn.disabled=false;btn.textContent='🗑 Vider les quotas';toast(e.message||'Impossible de vider les quotas.','error','Quotas');}
+  }catch(e){btn.disabled=false;btn.textContent='🗑 Vider les quotas';window.LSUI?.toast(e.message||'Impossible de vider les quotas.','error','Quotas');}
 }
 
 async function load(start,end){
@@ -189,7 +189,19 @@ async function main(){
   state.start=s;state.end=e;
   setText('#periodBadge','PÉRIODE ACTIVE · '+s+' → '+e);setText('#periodBadgeHero',s+' → '+e);
   const canImport=a.access.isAdmin||a.access.permissions.includes('activity_all')||a.access.permissions.includes('all');
-  if(canImport){const actions=$('#actions');if(actions)actions.innerHTML='<div class="flex flex-wrap gap-2"><button id="importButton" class="quota-btn">＋ Importer les interventions</button><button id="clearQuotaButton" class="quota-btn secondary border-red-900/60 text-red-300 hover:border-red-700 hover:bg-red-950/30">🗑 Vider les quotas</button></div>';const importButton=$('#importButton'),clearQuotaButton=$('#clearQuotaButton');if(importButton)importButton.onclick=openImport;if(clearQuotaButton)clearQuotaButton.onclick=clearQuotas}
+  const actions=$('#actions');
+  if(actions){
+    actions.innerHTML=canImport
+      ? '<div class="flex flex-wrap gap-2"><button type="button" id="importButton" class="quota-btn" data-quota-action="import">＋ Importer les interventions</button><button type="button" id="clearQuotaButton" class="quota-btn secondary border-red-900/60 text-zinc-200" data-quota-action="clear">🗑 Vider les quotas</button></div>'
+      : '';
+    actions.onclick=e=>{
+      const btn=e.target.closest('[data-quota-action]');
+      if(!btn)return;
+      e.preventDefault();
+      if(btn.dataset.quotaAction==='import')openImport();
+      if(btn.dataset.quotaAction==='clear')clearQuotas();
+    };
+  }
   await load(s,e);
  }catch(e){const content=$('#content');if(content){content.setAttribute('aria-busy','false');content.innerHTML='<div class="ui-error"><b>Impossible de charger l’activité.</b><br><span>'+esc(e.message||'Erreur inconnue')+'</span><button type="button" class="quota-btn secondary" id="retryActivity">Réessayer</button></div>'}$('#retryActivity')?.addEventListener('click',()=>location.reload());}
 }
