@@ -1,5 +1,7 @@
 const api=(u,o)=>fetch(u,{credentials:'same-origin',cache:'no-store',...o,headers:{'Cache-Control':'no-cache',...(o?.headers||{})}}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(Error(d.error||'Erreur'),{status:r.status,data:d});return d});
 const $=s=>document.querySelector(s);
+const setText=(s,v)=>{const el=$(s);if(el)el.textContent=String(v??'');return el};
+const toast=(message,type='info',title='Activité')=>window.LSUI?.toast?window.LSUI.toast(message,type,title):console.warn('[LS CUSTOM]',message);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const money=v=>'$ '+Number(v||0).toLocaleString('fr-FR');
 const localDate=()=>{
@@ -162,12 +164,15 @@ async function load(start,end){
  const [activity,history]=await Promise.all([api('/api/employee/activity?start='+encodeURIComponent(start)+'&end='+encodeURIComponent(end)),api('/api/employee/quotas/imports')]);
  state.rows=Array.isArray(activity.rows)?activity.rows:[];state.imports=Array.isArray(history.rows)?history.rows:[];
  render();
+ const content=$('#content');if(content)content.setAttribute('aria-busy','false');
 }
 
 async function main(){
  try{
   const a=await api('/api/session/access');state.access=a.access;
-  $('#user').textContent=(a.user.global_name||a.user.username)+' — '+((a.access.roles||[]).map(x=>x.name).join(' • ')||'Employé');
+  const userName=a.user.global_name||a.user.username||'Membre';
+  const userRole=(a.access.roles||[]).map(x=>x.name).filter(Boolean).join(' • ')||'Employé';
+  const userBox=$('#user');if(userBox)userBox.innerHTML='<span class="ls-sidebar-avatar" aria-hidden="true">'+esc(userName.slice(0,2).toUpperCase())+'</span><span class="ls-sidebar-user-copy"><strong>'+esc(userName)+'</strong><small>'+esc(userRole)+'</small></span>';
   $('#logout').onclick=async()=>{await api('/auth/player/logout',{method:'POST'});location.href='/connexion'};
   if(a.access.isAdmin)$('#developerNav')?.classList.remove('hidden');
   const [fallbackStart,fallbackEnd]=localDate();
@@ -181,9 +186,10 @@ async function main(){
     if(active.import?.period_start&&active.import?.period_end){s=active.import.period_start;e=active.import.period_end;}
   }catch{}
   state.start=s;state.end=e;
+  setText('#periodBadge','PÉRIODE ACTIVE · '+s+' → '+e);setText('#periodBadgeHero',s+' → '+e);
   const canImport=a.access.isAdmin||a.access.permissions.includes('activity_all')||a.access.permissions.includes('all');
   if(canImport){$('#actions').innerHTML='<div class="flex flex-wrap gap-2"><button id="importButton" class="quota-btn">＋ Importer les interventions</button><button id="clearQuotaButton" class="quota-btn secondary border-red-900/60 text-red-300 hover:border-red-700 hover:bg-red-950/30">🗑 Vider les quotas</button></div>';$('#importButton').onclick=openImport;$('#clearQuotaButton').onclick=clearQuotas}
   await load(s,e);
- }catch(e){$('#content').innerHTML='<div class="ui-error"><b>Impossible de charger l’activité.</b><br><span>'+esc(e.message)+'</span></div>'}
+ }catch(e){const content=$('#content');if(content){content.setAttribute('aria-busy','false');content.innerHTML='<div class="ui-error"><b>Impossible de charger l’activité.</b><br><span>'+esc(e.message||'Erreur inconnue')+'</span><button type="button" class="quota-btn secondary" id="retryActivity">Réessayer</button></div>'}$('#retryActivity')?.addEventListener('click',()=>location.reload());}
 }
 main();
