@@ -86,12 +86,9 @@ async function main(){
  try{
   const r=await api('/api/session/access');
   const access=r.access;
-  const userEl=$('#user');
-  const limited=!access.isAdmin&&access.permissions.length===0; if(userEl) userEl.textContent=(r.user.global_name||r.user.username)+' — '+(access.isAdmin?'Gérant légal / Développeur':(access.roles||[]).map(x=>x.name).join(' • ')||'Employé');
+  const limited=!access.isAdmin&&access.permissions.length===0;
   document.querySelectorAll('[data-permission]').forEach(a=>{if(!(access.isAdmin||access.permissions.includes(a.dataset.permission)||access.permissions.includes('all')))a.remove()});
-  if(access.isAdmin)$('#developerNav').classList.remove('hidden');
-  $('#logout').onclick=async()=>{await api('/auth/player/logout',{method:'POST'});location.href='/connexion'};
-  const fallback=week();
+    const fallback=week();
   const overview=await api('/api/employee/overview');
   const start=overview.period_start||fallback[0],end=overview.period_end||fallback[1];
   const periodEl=$('#periodLabel'); if(periodEl) periodEl.textContent=start+' → '+end;

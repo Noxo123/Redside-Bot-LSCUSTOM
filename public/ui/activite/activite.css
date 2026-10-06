@@ -20,8 +20,8 @@
   bottom:-1px;
   width:145px;
   height:1px;
-  background:linear-gradient(90deg,#f5c842,transparent);
-  box-shadow:0 0 14px rgba(245,200,66,.22);
+  background:linear-gradient(90deg,#ffffff,transparent);
+  box-shadow:0 0 14px rgba(255,255,255,.22);
 }
 .activity-eyebrow{
   margin-bottom:9px;
@@ -101,7 +101,7 @@
   border:1px solid rgba(255,255,255,.065);
   border-radius:10px;
   background:
-    radial-gradient(circle at 100% 0,rgba(245,200,66,.045),transparent 45%),
+    radial-gradient(circle at 100% 0,rgba(255,255,255,.045),transparent 45%),
     linear-gradient(145deg,#121216,#0b0b0e);
   box-shadow:0 18px 48px rgba(0,0,0,.20);
   transition:transform .2s cubic-bezier(.22,1,.36,1),border-color .2s,box-shadow .2s;
@@ -113,19 +113,19 @@
   top:0;
   width:34px;
   height:1px;
-  background:#f5c842;
+  background:#ffffff;
   opacity:.6;
 }
 .quota-kpi:hover{
   transform:translateY(-2px);
-  border-color:rgba(245,200,66,.16);
+  border-color:rgba(255,255,255,.16);
   box-shadow:0 24px 60px rgba(0,0,0,.27);
 }
 .quota-kpi-hero{
   grid-row:span 2;
   min-height:254px;
   background:
-    radial-gradient(circle at 85% 5%,rgba(245,200,66,.10),transparent 36%),
+    radial-gradient(circle at 85% 5%,rgba(255,255,255,.10),transparent 36%),
     linear-gradient(145deg,#15140f,#0c0c0e 65%);
 }
 .quota-kpi-hero::after{
@@ -136,8 +136,8 @@
   right:-80px;
   bottom:-90px;
   border-radius:50%;
-  border:1px solid rgba(245,200,66,.09);
-  box-shadow:0 0 60px rgba(245,200,66,.05);
+  border:1px solid rgba(255,255,255,.09);
+  box-shadow:0 0 60px rgba(255,255,255,.05);
 }
 .quota-kpi small{
   position:relative;
@@ -156,7 +156,7 @@
   font:700 clamp(23px,2.3vw,35px)/1 "Bebas Neue",sans-serif;
   letter-spacing:1px;
 }
-.quota-kpi-hero strong{color:#f5c842}
+.quota-kpi-hero strong{color:#ffffff}
 .quota-kpi span{
   position:relative;
   z-index:1;
@@ -179,8 +179,8 @@
   width:0;
   height:100%;
   border-radius:inherit;
-  background:linear-gradient(90deg,#d4a017,#f5c842);
-  box-shadow:0 0 13px rgba(245,200,66,.25);
+  background:linear-gradient(90deg,#d9d9d9,#ffffff);
+  box-shadow:0 0 13px rgba(255,255,255,.25);
   transition:width .9s cubic-bezier(.22,1,.36,1);
 }
 
@@ -204,7 +204,7 @@
   left:0;
   width:72px;
   height:1px;
-  background:linear-gradient(90deg,#f5c842,transparent);
+  background:linear-gradient(90deg,#ffffff,transparent);
   pointer-events:none;
 }
 #content>section.mb-6.rounded-2xl>button{
@@ -220,7 +220,7 @@
   background:rgba(255,255,255,.018)!important;
 }
 #content>section.mb-6.rounded-2xl>button:focus-visible{
-  box-shadow:inset 0 0 0 2px rgba(245,200,66,.20);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.20);
 }
 #content>section.mb-6.rounded-2xl>button>div:first-child{
   min-width:0;
@@ -259,8 +259,8 @@
   transition:transform .25s cubic-bezier(.22,1,.36,1),color .18s,border-color .18s;
 }
 #content>section.mb-6.rounded-2xl>button:hover #importHistoryChevron{
-  color:#f5c842!important;
-  border-color:rgba(245,200,66,.20)!important;
+  color:#ffffff!important;
+  border-color:rgba(255,255,255,.20)!important;
 }
 #content>section.mb-6.rounded-2xl>#importHistoryBody{
   border-top:1px solid rgba(255,255,255,.055)!important;
@@ -291,7 +291,7 @@
   transition:background .16s;
 }
 #content>section.mb-6.rounded-2xl tbody tr:hover{
-  background:rgba(245,200,66,.025);
+  background:rgba(255,255,255,.025);
 }
 #content>section.mb-6.rounded-2xl tbody tr:last-child td{
   border-bottom:0!important;
@@ -344,9 +344,9 @@
   text-transform:uppercase;
 }
 #content>section.mb-6.rounded-2xl .quota-btn.secondary:hover{
-  color:#f5c842!important;
-  border-color:rgba(245,200,66,.24)!important;
-  background:rgba(245,200,66,.045)!important;
+  color:#ffffff!important;
+  border-color:rgba(255,255,255,.24)!important;
+  background:rgba(255,255,255,.045)!important;
   transform:translateY(-1px);
 }
 #content>section.mb-6.rounded-2xl .quota-btn.secondary:disabled{
@@ -426,10 +426,10 @@
 .quota-badge{
   display:inline-flex;
   padding:4px 7px;
-  border:1px solid rgba(245,200,66,.15);
+  border:1px solid rgba(255,255,255,.15);
   border-radius:999px;
-  background:rgba(245,200,66,.035);
-  color:#d8b23c;
+  background:rgba(255,255,255,.035);
+  color:#d0d0d0;
   font:700 8px "JetBrains Mono",monospace;
 }
 .quota-progress{
@@ -445,12 +445,12 @@
   width:0;
   height:100%;
   border-radius:inherit;
-  background:linear-gradient(90deg,#d4a017,#f5c842);
-  box-shadow:0 0 8px rgba(245,200,66,.20);
+  background:linear-gradient(90deg,#d9d9d9,#ffffff);
+  box-shadow:0 0 8px rgba(255,255,255,.20);
   transition:width .7s cubic-bezier(.22,1,.36,1);
 }
 .quota-money{
-  color:#d8b23c!important;
+  color:#d0d0d0!important;
   font:600 9px "JetBrains Mono",monospace!important;
 }
 .quota-num{
@@ -459,7 +459,7 @@
 }
 .quota-total td{
   background:rgba(212,160,23,.045)!important;
-  border-top:1px solid rgba(245,200,66,.20)!important;
+  border-top:1px solid rgba(255,255,255,.20)!important;
   color:#ddd7cf!important;
   font-weight:800;
 }
@@ -582,9 +582,9 @@
   text-transform:uppercase;
 }
 .quota-modal #importProgress{
-  border-color:rgba(245,200,66,.14)!important;
-  background:rgba(245,200,66,.035)!important;
-  color:#d8b23c!important;
+  border-color:rgba(255,255,255,.14)!important;
+  background:rgba(255,255,255,.035)!important;
+  color:#d0d0d0!important;
 }
 .quota-modal #importError{
   min-height:18px;
@@ -620,8 +620,8 @@
 }
 .quota-btn:hover{
   transform:translateY(-1px);
-  border-color:rgba(245,200,66,.38);
-  background:rgba(245,200,66,.11);
+  border-color:rgba(255,255,255,.38);
+  background:rgba(255,255,255,.11);
   box-shadow:0 8px 25px rgba(212,160,23,.08);
 }
 .quota-btn.secondary{
@@ -651,7 +651,7 @@
   font-size:11px!important;
 }
 #quotaSearch:focus{
-  border-color:rgba(245,200,66,.30)!important;
+  border-color:rgba(255,255,255,.30)!important;
   box-shadow:0 0 0 3px rgba(212,160,23,.07)!important;
   outline:none!important;
 }
@@ -682,7 +682,7 @@
   width:26px;
   height:26px;
   border:2px solid rgba(255,255,255,.08);
-  border-top-color:#f5c842;
+  border-top-color:#ffffff;
   border-radius:50%;
   animation:activitySpin .7s linear infinite;
 }
@@ -773,7 +773,7 @@
 .ls-activity-page{overflow-x:hidden}
 .ls-activity-main{min-width:0}
 .ls-activity-container{width:min(1500px,100%);margin:0 auto;padding:0 32px 72px}
-.activity-period-badge{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border:1px solid rgba(245,200,66,.16);border-radius:999px;background:rgba(245,200,66,.035);color:#c9aa55;font:700 8px "JetBrains Mono",monospace;letter-spacing:.4px}
+.activity-period-badge{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(255,255,255,.035);color:#c9aa55;font:700 8px "JetBrains Mono",monospace;letter-spacing:.4px}
 .activity-hero[data-motion=hero]{animation:activityHeroIn .55s cubic-bezier(.22,1,.36,1) both}
 .quota-kpi,.podium-workspace,#content>section.mb-6.rounded-2xl,.quota-table-wrap{animation:activityReveal .55s cubic-bezier(.22,1,.36,1) both}
 .quota-command-center .quota-kpi:nth-child(2){animation-delay:.04s}.quota-command-center .quota-kpi:nth-child(3){animation-delay:.08s}.quota-command-center .quota-kpi:nth-child(4){animation-delay:.12s}.quota-command-center .quota-kpi:nth-child(5){animation-delay:.16s}.quota-command-center .quota-kpi:nth-child(6){animation-delay:.20s}.quota-command-center .quota-kpi:nth-child(7){animation-delay:.24s}.quota-command-center .quota-kpi:nth-child(8){animation-delay:.28s}
@@ -788,7 +788,7 @@
 .ui-error button{justify-self:start}
 .activity-loading{min-height:240px;display:grid;place-items:center;align-content:center;gap:8px;padding:32px;border:1px dashed rgba(255,255,255,.10);border-radius:12px;background:rgba(255,255,255,.012);color:#77726b;text-align:center;animation:activityReveal .4s ease both}
 .activity-loading strong{color:#d8d3cc;font-size:13px}.activity-loading span{font-size:10px;color:#5f5b55}
-.activity-spinner{width:24px;height:24px;border:2px solid rgba(245,200,66,.14);border-top-color:#f5c842;border-radius:50%;animation:activitySpin .8s linear infinite}
+.activity-spinner{width:24px;height:24px;border:2px solid rgba(255,255,255,.14);border-top-color:#ffffff;border-radius:50%;animation:activitySpin .8s linear infinite}
 @keyframes activityHeroIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
 @keyframes activityReveal{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 @keyframes activityActionIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
