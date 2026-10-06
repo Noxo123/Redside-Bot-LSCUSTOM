@@ -14,9 +14,96 @@ const formatDateTime=v=>{if(!v)return '—';const d=new Date(v);return Number.is
 let state={access:null,start:'',end:'',rows:[],imports:[]};
 
 function modal(){
- return `<div id="quotaModal" class="quota-modal"><div class="quota-dialog max-w-4xl"><div class="quota-dialog-head"><div><div class="text-[10px] font-bold tracking-[.22em] text-zinc-600">IMPORT RH</div><h2 class="mt-1 text-xl font-bold text-white">Importer les interventions</h2><p class="mt-1 text-xs text-zinc-500">Chaque import est enregistré avec sa période, son contenu et sa date/heure exacte.</p></div><button id="closeQuota" class="quota-btn secondary">Fermer</button></div><div class="quota-dialog-body"><div class="quota-grid"><div><label class="quota-label">Début</label><input id="importStart" type="date" class="w-full p-3"></div><div><label class="quota-label">Fin</label><input id="importEnd" type="date" class="w-full p-3"></div><div class="wide"><label class="quota-label">Relevé complet</label><textarea id="importRaw" rows="15" class="w-full p-3" placeholder="1. José Mendez — Appels: 2 · Réparations: 7 · Mises en fourrière: 40 · Personnalisations: 6 · Montant fourrière: $ 400 000 · ..."></textarea><p class="mt-2 text-xs text-zinc-600">Les indicateurs et les montants sont détectés automatiquement. Le relevé original est conservé en base avec l'heure d'import.</p></div></div><div id="importProgress" class="mt-4 hidden rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-sm text-zinc-300"></div><div id="importError" class="mt-3 text-sm text-red-400"></div><div class="mt-5 flex justify-end gap-2"><button id="cancelQuota" class="quota-btn secondary">Annuler</button><button id="sendQuota" class="quota-btn">Importer et sauvegarder</button></div></div></div></div>`;
-}
+ return `
+<div id="quotaModal" class="quota-modal" role="dialog" aria-modal="true" aria-labelledby="quotaModalTitle">
+  <div class="quota-dialog quota-import-dialog">
+    <div class="quota-dialog-glow"></div>
+    <header class="quota-dialog-head">
+      <div class="quota-modal-title-wrap">
+        <span class="quota-modal-icon" aria-hidden="true">↑</span>
+        <div>
+          <div class="quota-modal-eyebrow">RH · IMPORT INTERVENTIONS</div>
+          <h2 id="quotaModalTitle">Importer les interventions</h2>
+          <p>Ajoute le relevé de la semaine. Les données seront analysées puis enregistrées dans l’historique RH.</p>
+        </div>
+      </div>
+      <button type="button" id="closeQuota" class="quota-modal-close" aria-label="Fermer le modal">×</button>
+    </header>
 
+    <div class="quota-import-steps" aria-label="Étapes de l’import">
+      <div class="quota-import-step is-active" data-step="1"><b>01</b><span>Relevé</span></div>
+      <i></i>
+      <div class="quota-import-step" data-step="2"><b>02</b><span>Analyse</span></div>
+      <i></i>
+      <div class="quota-import-step" data-step="3"><b>03</b><span>Enregistrement</span></div>
+    </div>
+
+    <div class="quota-dialog-body">
+      <div id="importFormState" class="quota-import-state">
+        <div class="quota-import-period">
+          <div class="quota-import-field">
+            <label class="quota-label" for="importStart">Début de période</label>
+            <div class="quota-input-wrap"><span>CAL</span><input id="importStart" type="date" autocomplete="off"></div>
+          </div>
+          <div class="quota-import-field">
+            <label class="quota-label" for="importEnd">Fin de période</label>
+            <div class="quota-input-wrap"><span>CAL</span><input id="importEnd" type="date" autocomplete="off"></div>
+          </div>
+        </div>
+
+        <div class="quota-import-field">
+          <div class="quota-field-head">
+            <label class="quota-label" for="importRaw">Relevé complet</label>
+            <span id="importCharCount">0 caractère</span>
+          </div>
+          <textarea id="importRaw" rows="15" spellcheck="false" placeholder="1. José Mendez — Appels: 2 · Réparations: 7 · Mises en fourrière: 40 · Personnalisations: 6 · Montant fourrière: $ 400 000 · ..."></textarea>
+          <div class="quota-import-help">
+            <span>i</span>
+            <p>Colle le relevé brut fourni par Discord. Les employés, interventions et montants sont détectés automatiquement. Le texte original reste conservé pour l’historique.</p>
+          </div>
+        </div>
+
+        <div id="importError" class="quota-import-error" role="alert" aria-live="polite"></div>
+
+        <footer class="quota-import-footer">
+          <div class="quota-import-secure"><span>●</span> Enregistrement sécurisé · horodatage automatique</div>
+          <div class="quota-modal-actions">
+            <button type="button" id="cancelQuota" class="quota-btn secondary">Annuler</button>
+            <button type="button" id="sendQuota" class="quota-btn quota-btn-primary">Continuer <span>→</span></button>
+          </div>
+        </footer>
+      </div>
+
+      <div id="importLoadingState" class="quota-import-state quota-import-loading hidden" aria-live="polite">
+        <div class="quota-import-orbit"><span></span><i></i></div>
+        <div class="quota-import-loading-copy">
+          <div class="quota-modal-eyebrow">TRAITEMENT EN COURS</div>
+          <h3 id="importProgressTitle">Analyse du relevé…</h3>
+          <p id="importProgress">Lecture des interventions et vérification des données.</p>
+        </div>
+        <div class="quota-import-loading-bar"><i id="importProgressBar"></i></div>
+        <div class="quota-import-checks">
+          <span id="importCheckParse">○ Analyse du relevé</span>
+          <span id="importCheckValidate">○ Validation de la période</span>
+          <span id="importCheckSave">○ Enregistrement en base</span>
+        </div>
+      </div>
+
+      <div id="importSuccessState" class="quota-import-state quota-import-result hidden" aria-live="polite">
+        <div class="quota-result-icon">✓</div>
+        <div class="quota-modal-eyebrow">IMPORT TERMINÉ</div>
+        <h3>Les interventions sont enregistrées</h3>
+        <p id="importSuccessText">L’import a été sauvegardé dans l’historique RH.</p>
+        <div class="quota-result-meta">
+          <div><span>LIGNES IMPORTÉES</span><strong id="importSuccessCount">0</strong></div>
+          <div><span>DATE / HEURE</span><strong id="importSuccessDate">—</strong></div>
+        </div>
+        <button type="button" id="finishQuota" class="quota-btn quota-btn-primary">Fermer <span>✓</span></button>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
 function renderHistory(){
  const rows=state.imports||[];
  if(!rows.length)return '<section class="mb-6 rounded-2xl border border-zinc-800 bg-[#090909] p-5"><div class="text-[10px] font-bold tracking-[.2em] text-zinc-600">HISTORIQUE RH</div><h2 class="mt-1 text-lg font-semibold text-white">Imports enregistrés</h2><p class="mt-2 text-sm text-zinc-500">Aucun import enregistré pour le moment.</p></section>';
@@ -119,31 +206,112 @@ function render(){
  };
 }
 function openImport(){
+ document.querySelector('#quotaModal')?.remove();
  document.body.insertAdjacentHTML('beforeend',modal());
+
+ const root=$('#quotaModal');
+ const form=$('#importFormState'),loading=$('#importLoadingState'),success=$('#importSuccessState');
+ const startInput=$('#importStart'),endInput=$('#importEnd'),rawInput=$('#importRaw');
+ const send=$('#sendQuota'),closeBtn=$('#closeQuota'),cancel=$('#cancelQuota'),finish=$('#finishQuota');
  const [s,e]=localDate();
- $('#importStart').value=state.start||s;$('#importEnd').value=state.end||e;
- const close=()=>$('#quotaModal')?.remove();
- $('#closeQuota').onclick=close;$('#cancelQuota').onclick=close;
- $('#sendQuota').onclick=async()=>{
-   const err=$('#importError'),progress=$('#importProgress'),btn=$('#sendQuota');
-   err.textContent='';progress.classList.remove('hidden');progress.textContent='Analyse du relevé…';btn.disabled=true;btn.textContent='Analyse…';
+ startInput.value=state.start||s;
+ endInput.value=state.end||e;
+ rawInput.focus();
+
+ const close=()=>{
+   if(send?.disabled)return;
+   root?.classList.add('is-closing');
+   setTimeout(()=>root?.remove(),150);
+ };
+ const setStep=n=>{
+   root?.querySelectorAll('.quota-import-step').forEach(step=>{
+     const value=Number(step.dataset.step);
+     step.classList.toggle('is-active',value===n);
+     step.classList.toggle('is-done',value<n);
+   });
+   root?.querySelectorAll('.quota-import-steps>i').forEach((line,index)=>line.classList.toggle('is-done',index<n-1));
+ };
+ const setCheck=(id,done)=>{const el=$(id);if(el){el.textContent=(done?'✓ ':'○ ')+el.textContent.replace(/^[✓○]\s*/,'');el.classList.toggle('is-done',done)}};
+ const updateCount=()=>{
+   const count=rawInput.value.length;
+   const el=$('#importCharCount');
+   if(el)el.textContent=count.toLocaleString('fr-FR')+' caractère'+(count>1?'s':'');
+   rawInput.classList.toggle('is-ready',count>=20);
+ };
+ const onKey=e=>{
+   if(e.key==='Escape'&&!send.disabled)close();
+ };
+ rawInput.addEventListener('input',updateCount);
+ document.addEventListener('keydown',onKey);
+ closeBtn.onclick=close;
+ cancel.onclick=close;
+ finish.onclick=()=>{root?.remove();load(startInput.value,endInput.value)};
+ root.addEventListener('click',e=>{if(e.target===root&&!send.disabled)close()});
+ updateCount();
+
+ send.onclick=async()=>{
+   const err=$('#importError');
+   const periodStart=startInput.value,periodEnd=endInput.value,raw=rawInput.value.trim();
+   err.textContent='';
+   if(!periodStart||!periodEnd||periodStart>periodEnd){
+     err.textContent='La période sélectionnée est invalide. Vérifie les deux dates.';
+     startInput.focus();return;
+   }
+   if(raw.length<20){
+     err.textContent='Le relevé est trop court. Colle le relevé complet avant de continuer.';
+     rawInput.focus();return;
+   }
+
+   send.disabled=true;
+   setStep(2);
+   form.classList.add('hidden');
+   loading.classList.remove('hidden');
+   $('#importProgressTitle').textContent='Analyse du relevé…';
+   $('#importProgress').textContent='Lecture des interventions et vérification des données.';
+   $('#importProgressBar').style.width='28%';
+   setCheck('importCheckParse',true);
+
    try{
-     const periodStart=$('#importStart').value,periodEnd=$('#importEnd').value,raw=$('#importRaw').value;
-     if(!periodStart||!periodEnd||periodStart>periodEnd)throw Error('La période sélectionnée est invalide.');
-     if(raw.trim().length<20)throw Error('Le relevé est trop court.');
-     progress.textContent='Enregistrement en base et sauvegarde de la date/heure…';btn.textContent='Sauvegarde…';
-     const r=await api('/api/employee/quotas/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({period_start:periodStart,period_end:periodEnd,text:raw})});
-     progress.textContent='Import sauvegardé le '+formatDateTime(r.import?.imported_at)+' ✓';
-     btn.textContent='Terminé ✓';
-     await new Promise(resolve=>setTimeout(resolve,500));
-     close();await load(periodStart,periodEnd);
-     window.LSUI?.toast(r.count+' ligne(s) importée(s) · import enregistré avec succès.','success','Import RH');
+     await new Promise(resolve=>setTimeout(resolve,250));
+     $('#importProgress').textContent='Validation de la période et des informations reçues.';
+     $('#importProgressBar').style.width='55%';
+     setCheck('importCheckValidate',true);
+
+     const r=await api('/api/employee/quotas/import',{
+       method:'POST',
+       headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({period_start:periodStart,period_end:periodEnd,text:raw})
+     });
+
+     setStep(3);
+     $('#importProgressTitle').textContent='Enregistrement terminé';
+     $('#importProgress').textContent='Écriture de l’import et de son horodatage dans la base.';
+     $('#importProgressBar').style.width='100%';
+     setCheck('importCheckSave',true);
+     await new Promise(resolve=>setTimeout(resolve,350));
+
+     loading.classList.add('hidden');
+     success.classList.remove('hidden');
+     $('#importSuccessCount').textContent=Number(r.count||0).toLocaleString('fr-FR');
+     $('#importSuccessDate').textContent=formatDateTime(r.import?.imported_at||new Date().toISOString());
+     $('#importSuccessText').textContent='La période '+periodStart+' → '+periodEnd+' est maintenant disponible dans l’historique RH.';
+     finish.focus();
+
+     await load(periodStart,periodEnd);
+     toast(Number(r.count||0)+' ligne(s) importée(s) · import enregistré avec succès.','success','Import RH');
    }catch(e){
-     progress.classList.add('hidden');err.textContent=(e.message||'Impossible d’enregistrer l’import.')+(Array.isArray(e.data?.errors)&&e.data.errors.length?' — '+e.data.errors.slice(0,5).map(x=>'ligne '+x.line+': '+x.error).join(' · '):'');btn.disabled=false;btn.textContent='Importer et sauvegarder';
+     loading.classList.add('hidden');
+     form.classList.remove('hidden');
+     setStep(1);
+     send.disabled=false;
+     const details=Array.isArray(e.data?.errors)&&e.data.errors.length
+       ?' '+e.data.errors.slice(0,5).map(x=>'Ligne '+x.line+': '+x.error).join(' · ')
+       :'';
+     err.textContent=(e.message||'Impossible d’enregistrer l’import.')+details;
+     rawInput.focus();
    }
  };
 }
-
 async function clearQuotas(){
  const ok=confirm('⚠️ VIDER LES QUOTAS\n\nCette action supprime tous les relevés de quotas et tout l’historique des imports pour ce serveur. Les employés, rôles, comptes et réglages seront conservés.\n\nContinuer ?');
  if(!ok)return;
