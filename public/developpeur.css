@@ -327,3 +327,67 @@
   .ls-developer-page #app{animation:none}
   .ls-developer-page *{scroll-behavior:auto!important;transition:none!important}
 }
+
+/* Dynamic developer.js markup — normalize every generated surface */
+.ls-developer-page #app>div:first-child{display:flex;gap:5px;overflow-x:auto;padding:4px;margin-bottom:12px;border:1px solid var(--dev-border);border-radius:10px;background:#08080b}
+.ls-developer-page #app>div:first-child>button{
+  flex:none;min-height:36px;padding:8px 12px!important;border:1px solid transparent!important;border-radius:7px!important;
+  background:transparent!important;color:#68686e!important;font:700 8px "JetBrains Mono",monospace!important;transition:.18s ease!important;
+}
+.ls-developer-page #app>div:first-child>button:hover{color:#ddd!important;background:#111115!important}
+.ls-developer-page #app>div:first-child>button.border-zinc-600{
+  color:#fff!important;background:#17171b!important;border-color:rgba(255,255,255,.14)!important;
+}
+.ls-developer-page #app>section{
+  position:relative;padding:22px!important;border:1px solid var(--dev-border)!important;border-radius:13px!important;
+  background:linear-gradient(145deg,rgba(14,14,18,.98),rgba(8,8,11,.98))!important;
+  box-shadow:0 24px 70px rgba(0,0,0,.22)!important;
+}
+.ls-developer-page #app h2{color:#ededed!important;font:700 25px/1 "Bebas Neue",sans-serif!important;letter-spacing:.8px!important}
+.ls-developer-page #app h3{color:#ddd!important;font-size:14px!important}
+.ls-developer-page #app p{color:#65656b!important}
+.ls-developer-page #app label{color:#696970!important}
+.ls-developer-page #app input:not([type="checkbox"]),.ls-developer-page #app select,.ls-developer-page #app textarea{
+  border:1px solid var(--dev-border)!important;border-radius:7px!important;background:#08080b!important;color:#ddd!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.025)!important;
+}
+.ls-developer-page #app input:not([type="checkbox"]):focus,.ls-developer-page #app select:focus,.ls-developer-page #app textarea:focus{
+  border-color:rgba(255,255,255,.25)!important;box-shadow:0 0 0 3px rgba(255,255,255,.035)!important;outline:none!important;
+}
+.ls-developer-page #app article{
+  border-color:var(--dev-border)!important;background:linear-gradient(145deg,#101014,#0a0a0d)!important;
+  border-radius:10px!important;box-shadow:0 10px 32px rgba(0,0,0,.15)!important;
+  transition:.18s ease;
+}
+.ls-developer-page #app article:hover{border-color:rgba(255,255,255,.12)!important;transform:translateY(-1px)}
+.ls-developer-page #app button{
+  border-radius:7px;
+  transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease;
+}
+.ls-developer-page #app button.bg-white{
+  background:#eee!important;color:#080808!important;border-color:#eee!important;
+}
+.ls-developer-page #app button.bg-white:hover{background:#fff!important;box-shadow:0 10px 25px rgba(255,255,255,.08)}
+.ls-developer-page #app button.border-zinc-700{
+  border-color:var(--dev-border-strong)!important;background:#0b0b0e!important;color:#aaa!important;
+}
+.ls-developer-page #app button.border-zinc-700:hover{color:#fff!important;border-color:rgba(255,255,255,.25)!important;background:#151519!important}
+.ls-developer-page #app .border-emerald-900{border-color:rgba(113,211,154,.2)!important}
+.ls-developer-page #app .text-emerald-400{color:var(--dev-green)!important}
+.ls-developer-page #app .text-amber-400{color:var(--dev-amber)!important}
+.ls-developer-page #app .text-violet-300{color:var(--dev-purple)!important}
+.ls-developer-page #app .text-red-400{color:var(--dev-red)!important}
+.ls-developer-page #app .bg-red-950\/20{background:rgba(70,18,18,.13)!important}
+.ls-developer-page #app .bg-amber-950\/30{background:rgba(70,55,18,.12)!important}
+.ls-developer-page #app .bg-violet-950\/30{background:rgba(45,28,70,.16)!important}
+.ls-developer-page #app .divide-zinc-800>div{border-color:var(--dev-border)!important}
+.ls-developer-page #app .font-mono{font-family:"JetBrains Mono",monospace!important}
+.ls-developer-page #app input[type="checkbox"]{
+  appearance:none;width:15px!important;height:15px!important;min-height:15px!important;padding:0!important;
+  border:1px solid #3b3b40!important;border-radius:4px!important;background:#09090c!important;position:relative;
+}
+.ls-developer-page #app input[type="checkbox"]:checked{background:#eee!important;border-color:#eee!important}
+.ls-developer-page #app input[type="checkbox"]:checked:after{
+  content:"";position:absolute;width:5px;height:9px;left:4px;top:1px;border:solid #080808;border-width:0 2px 2px 0;transform:rotate(45deg);
+}
+.ls-developer-page .ls-modal form button.bg-white,.ls-developer-page .ls-modal button.bg-white{min-height:40px}
