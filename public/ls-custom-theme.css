@@ -149,3 +149,10 @@ a,button{-webkit-tap-highlight-color:transparent}
 @keyframes lsMonoHero{from{opacity:0;transform:translateY(18px) scale(.99);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
 @keyframes lsMonoReveal{from{opacity:0;transform:translateY(24px) scale(.985);filter:blur(3px)}to{opacity:1;transform:none;filter:none}}
 @media(prefers-reduced-motion:reduce){.ls-motion-ready .ls-motion-item,.ls-motion-ready .dash-header,.ls-motion-ready .activity-hero,.ls-motion-ready .page-toolbar,.ls-motion-ready .agenda-hero,.ls-motion-ready .podium-head{animation:none!important;opacity:1!important;transform:none!important;filter:none!important}}
+
+/* Public pages also animate without the authenticated application shell. */
+.ls-page .hero,.ls-page .login-card,.ls-page .podium-head,.ls-page .client-card{animation:lsMonoHero .8s var(--ls-motion) both}
+.ls-page .section,.ls-page .services,.ls-page .podium,.ls-page .activity,.ls-page .cards,.ls-page .values,.ls-page .portal{animation:lsMonoReveal .72s var(--ls-motion) both}
+.ls-page .section:nth-of-type(2),.ls-page .services>article:nth-child(2),.ls-page .activity>article:nth-child(2){animation-delay:90ms}
+.ls-page .section:nth-of-type(3),.ls-page .services>article:nth-child(3),.ls-page .activity>article:nth-child(3){animation-delay:170ms}
+.ls-page .section:nth-of-type(4),.ls-page .services>article:nth-child(4),.ls-page .activity>article:nth-child(4){animation-delay:250ms}
