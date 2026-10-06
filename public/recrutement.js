@@ -17,8 +17,35 @@ function modal(){
 
 function renderHistory(){
  const rows=state.imports||[];
- if(!rows.length)return '<section class="mb-6 rounded-2xl border border-zinc-800 bg-[#090909] p-5"><div class="text-[10px] font-bold tracking-[.2em] text-zinc-600">HISTORIQUE RH</div><h2 class="mt-1 text-lg font-semibold text-white">Imports enregistrés</h2><p class="mt-2 text-sm text-zinc-500">Aucun import enregistré pour le moment.</p></section>';
- return '<section class="mb-6 rounded-2xl border border-zinc-800 bg-[#090909] overflow-hidden"><button type="button" id="toggleImportHistory" class="w-full flex flex-wrap items-center justify-between gap-3 p-5 text-left hover:bg-white/[.02] transition-colors"><div><div class="text-[10px] font-bold tracking-[.2em] text-zinc-600">HISTORIQUE RH</div><h2 class="mt-1 text-lg font-semibold text-white">Imports enregistrés</h2><p class="mt-1 text-xs text-zinc-500">La date et l’heure correspondent au moment où l’import a été validé et écrit en base.</p></div><span class="flex items-center gap-3"><span class="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs text-zinc-500">'+rows.length+' import(s)</span><span id="importHistoryChevron" class="ls-history-chevron grid h-8 w-8 place-items-center rounded-lg border border-zinc-800 text-zinc-400">⌄</span></span></button><div id="importHistoryBody" class="ls-history-body is-collapsed border-t border-zinc-800"><div class="overflow-x-auto"><table class="min-w-full text-left text-sm"><thead><tr class="border-b border-zinc-800 text-[10px] uppercase tracking-wider text-zinc-600"><th class="px-3 py-3">Date / heure</th><th class="px-3 py-3">Période</th><th class="px-3 py-3">Par</th><th class="px-3 py-3">Lignes</th><th class="px-3 py-3">Créés</th><th class="px-3 py-3">Statut</th><th class="px-3 py-3"></th></tr></thead><tbody>'+rows.map(x=>'<tr class="border-b border-zinc-900 last:border-0"><td class="px-3 py-3 whitespace-nowrap text-zinc-300">'+esc(formatDateTime(x.imported_at))+'</td><td class="px-3 py-3 whitespace-nowrap text-zinc-400">'+esc(x.period_start)+' → '+esc(x.period_end)+'</td><td class="px-3 py-3 text-zinc-400">'+esc(x.imported_by_name||x.imported_by||'—')+'</td><td class="px-3 py-3 text-zinc-300">'+Number(x.imported_count||0)+'</td><td class="px-3 py-3 text-zinc-400">'+Number(x.created_count||0)+'</td><td class="px-3 py-3"><span class="rounded-full border border-emerald-900/60 bg-emerald-950/30 px-2 py-1 text-xs text-emerald-400">'+esc(x.status||'completed')+'</span></td><td class="px-3 py-3 text-right"><button class="quota-btn secondary text-xs" data-import-id="'+Number(x.id)+'" data-import-period="'+esc(x.period_start)+'|'+esc(x.period_end)+'">Restaurer</button></td></tr>').join('')+'</tbody></table></div></div></section>';
+ if(!rows.length)return '<section class="rh-history mb-6"><div class="rh-history-head"><div><span class="rh-eyebrow">HISTORIQUE RH</span><h2>Imports enregistrés</h2><p>Aucun import enregistré pour le moment.</p></div><span class="rh-history-count">0 IMPORT</span></div></section>';
+ const completed=rows.filter(x=>String(x.status||'completed').toLowerCase()==='completed').length;
+ const restoreRows=rows.map(x=>{
+  const status=String(x.status||'completed').toLowerCase();
+  const statusLabel=esc(status==='completed'?'COMPLETED':status);
+  const date=x.imported_at?new Date(x.imported_at):null;
+  const validDate=date&&!Number.isNaN(date.getTime());
+  const dateLabel=validDate?date.toLocaleDateString('fr-FR'):'—';
+  const timeLabel=validDate?date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
+  const period=esc(x.period_start||'—')+' <span>→</span> '+esc(x.period_end||'—');
+  const created=Number(x.created_count||0),lines=Number(x.imported_count||0);
+  const action=x.id?'<button class="rh-history-restore" data-import-id="'+Number(x.id)+'" data-import-period="'+esc((x.period_start||'')+'|'+(x.period_end||''))+'">Restaurer</button>':'<span class="rh-history-empty">—</span>';
+  return '<article class="rh-history-item">'+
+    '<div class="rh-history-date"><strong>'+dateLabel+'</strong><span>'+timeLabel+'</span></div>'+
+    '<div class="rh-history-period"><span class="rh-history-label">PÉRIODE</span><strong>'+period+'</strong></div>'+
+    '<div class="rh-history-author"><span class="rh-history-label">IMPORTÉ PAR</span><strong>'+esc(x.imported_by_name||x.imported_by||'—')+'</strong></div>'+
+    '<div class="rh-history-metric"><span class="rh-history-label">LIGNES</span><strong>'+lines+'</strong></div>'+
+    '<div class="rh-history-metric"><span class="rh-history-label">CRÉÉS</span><strong class="'+(created?'is-positive':'')+'">'+(created?'+'+created:'0')+'</strong></div>'+
+    '<div class="rh-history-status"><span class="rh-history-label">STATUT</span><span class="rh-status '+(status==='completed'?'is-complete':'')+'"><i></i>'+statusLabel+'</span></div>'+
+    '<div class="rh-history-action">'+action+'</div>'+
+  '</article>';
+ }).join('');
+ return '<section class="rh-history mb-6">'+
+   '<button type="button" id="toggleImportHistory" class="rh-history-head" aria-expanded="false">'+
+     '<div class="rh-history-title"><span class="rh-eyebrow">HISTORIQUE RH</span><h2>Imports enregistrés</h2><p>La date et l’heure correspondent au moment où l’import a été validé et écrit en base.</p></div>'+
+     '<div class="rh-history-head-meta"><span class="rh-history-count">'+rows.length+' '+(rows.length===1?'IMPORT':'IMPORTS')+'</span><span id="importHistoryChevron" class="ls-history-chevron rh-history-chevron">⌄</span></div>'+
+   '</button>'+
+   '<div id="importHistoryBody" class="ls-history-body is-collapsed"><div><div class="rh-history-list">'+restoreRows+'</div><div class="rh-history-foot"><span>'+completed+' import(s) terminé(s) avec succès</span><span>Historique conservé en base</span></div></div></div>'+
+ '</section>';
 }
 
 function render(){
