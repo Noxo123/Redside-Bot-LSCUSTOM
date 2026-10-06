@@ -156,7 +156,7 @@ async function clearQuotas(){
   btn.textContent='✓ Quotas vidés';
   await load(state.start,state.end);
   window.LSUI?.toast('Quotas vidés : '+Number(r.result?.quota_entries||0)+' relevé(s) et '+Number(r.result?.quota_imports||0)+' import(s) supprimé(s).','success','Quotas');
- }catch(e){btn.disabled=false;btn.textContent='🗑 Vider les quotas';alert(e.message||'Impossible de vider les quotas.');}
+ }catch(e){btn.disabled=false;btn.textContent='🗑 Vider les quotas';toast(e.message||'Impossible de vider les quotas.','error','Quotas');}
 }
 
 async function load(start,end){
