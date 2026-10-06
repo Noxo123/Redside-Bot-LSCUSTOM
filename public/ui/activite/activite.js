@@ -245,8 +245,8 @@ function openImport(){
  document.addEventListener('keydown',onKey);
  closeBtn.onclick=close;
  cancel.onclick=close;
- finish.onclick=()=>{root?.remove();load(startInput.value,endInput.value)};
- root.addEventListener('click',e=>{if(e.target===root&&!send.disabled)close()});
+ finish.onclick=()=>{document.removeEventListener('keydown',onKey);root?.remove()};
+ root.addEventListener('click',e=>{if(e.target===root&&!send.disabled)close()});\n window.requestAnimationFrame(()=>root?.classList.add('is-ready'));
  updateCount();
 
  send.onclick=async()=>{
