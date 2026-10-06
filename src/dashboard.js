@@ -96,6 +96,9 @@ if(process.env.NODE_ENV==='production'&&!process.env.SESSION_SECRET)console.warn
 app.use(session({name:process.env.NODE_ENV==='production'?'__Host-lscustom':'lscustom.sid',secret:sessionSecret,store:sessionStore,resave:false,saveUninitialized:false,cookie:{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:7*86400000}}));
 app.use((req,res,next)=>{
   res.setHeader('X-Content-Type-Options','nosniff');
+  res.setHeader('Content-Security-Policy',"default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://cdn.discordapp.com https://media.discordapp.net; connect-src 'self' https://discord.com https://cdn.discordapp.com; form-action 'self' https://discord.com; manifest-src 'self'; worker-src 'self' blob:");
+  res.setHeader('X-Permitted-Cross-Domain-Policies','none');
+  res.setHeader('Origin-Agent-Cluster','?1');
   res.setHeader('X-Frame-Options','SAMEORIGIN');
   res.setHeader('Referrer-Policy','no-referrer');
   res.setHeader('Permissions-Policy','camera=(),microphone=(),geolocation=()');
