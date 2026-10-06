@@ -352,7 +352,8 @@ app.post('/api/employee/quotas/imports/:id/activate',playerAuth,async(req,res)=>
  if(!a)return res.status(403).json({error:'Accès refusé.'});
  const allowedRole=a.isAdmin||a.permissions.includes('activity_all')||a.permissions.includes('all');
  if(!allowedRole)return res.status(403).json({error:'Accès RH requis.'});
- const result=activateQuotaImport(Number(req.params.id),g);
+ const importId=Number(req.params.id);if(!Number.isSafeInteger(importId)||importId<1)return res.status(400).json({error:'Identifiant d’import invalide.'});
+ const result=activateQuotaImport(importId,g);
  if(!result)return res.status(409).json({error:'Cette sauvegarde ne possède pas de snapshot restaurable.'});
  res.json({ok:true,import:result});
 }catch(e){console.error('Activation import RH:',e);res.status(500).json({error:'Impossible de restaurer cette sauvegarde RH.'})}});
@@ -372,6 +373,7 @@ app.post('/api/employee/quotas/import',playerAuth,async(req,res)=>{try{
  const start=clean(req.body.period_start,10),end=clean(req.body.period_end,10),raw=String(req.body.text||'');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end)||start>end)return res.status(400).json({error:'Période invalide.'});
  if(raw.trim().length<20)return res.status(400).json({error:'Colle le relevé complet des interventions.'});
+ if(raw.length>150000)return res.status(413).json({error:'Le relevé est trop volumineux (150 000 caractères maximum).'});
 
  const normalizeName=v=>String(v||'').replace(/^[•▪●\-*–—]+\s*/,'').replace(/^\d+[.)]\s*/,'').replace(/[*_]/g,'').replace(/\s+/g,' ').trim();
  const findField=(line,labels)=>{
