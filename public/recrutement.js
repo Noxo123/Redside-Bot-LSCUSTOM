@@ -167,9 +167,6 @@ async function load(start,end){
 async function main(){
  try{
   const a=await api('/api/session/access');state.access=a.access;
-  $('#user').textContent=(a.user.global_name||a.user.username)+' — '+((a.access.roles||[]).map(x=>x.name).join(' • ')||'Employé');
-  $('#logout').onclick=async()=>{await api('/auth/player/logout',{method:'POST'});location.href='/connexion'};
-  if(a.access.isAdmin)$('#developerNav')?.classList.remove('hidden');
   const [fallbackStart,fallbackEnd]=localDate();
   let s=fallbackStart,e=fallbackEnd;
   try{
