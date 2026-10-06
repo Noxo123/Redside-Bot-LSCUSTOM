@@ -36,6 +36,8 @@ const mobileLinks=links.map(([href,icon,label])=>{const p=perms[href],limited=!a
  document.body.appendChild(sheet);
  const more=dock.querySelector('#lsMobileMore');const closeMobile=()=>sheet.classList.remove('is-open');more.onclick=()=>sheet.classList.toggle('is-open');sheet.addEventListener('click',e=>{if(e.target===sheet)closeMobile()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMobile()});
  const main=root.querySelector(':scope > main');if(!main)return;
+ const motionItems=[...main.querySelectorAll('section,article,.dash-card,.dash-stat,.panel,.agenda-panel,.agenda-side,.mail,.thread,.quota-kpi,.podium-workspace,.quota-table-wrap')];motionItems.forEach((el,i)=>{if(el.classList.contains('ls-topbar'))return;el.classList.add('ls-motion-item');el.style.setProperty('--ls-motion-delay',Math.min(i,12)*35+'ms')});
+ if('IntersectionObserver' in window){const io=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('ls-motion-visible');io.unobserve(e.target)}}),{threshold:.08});motionItems.forEach(el=>io.observe(el));}
  main.style.setProperty('grid-column',window.matchMedia('(max-width:900px)').matches?'1':'2','important');
  main.style.setProperty('grid-row','1','important');
  main.style.setProperty('min-width','0','important');
