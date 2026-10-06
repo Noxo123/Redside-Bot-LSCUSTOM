@@ -173,7 +173,8 @@ async function main(){
   const userName=a.user.global_name||a.user.username||'Membre';
   const userRole=(a.access.roles||[]).map(x=>x.name).filter(Boolean).join(' • ')||'Employé';
   const userBox=$('#user');if(userBox)userBox.innerHTML='<span class="ls-sidebar-avatar" aria-hidden="true">'+esc(userName.slice(0,2).toUpperCase())+'</span><span class="ls-sidebar-user-copy"><strong>'+esc(userName)+'</strong><small>'+esc(userRole)+'</small></span>';
-  $('#logout').onclick=async()=>{await api('/auth/player/logout',{method:'POST'});location.href='/connexion'};
+  const logout=$('#logout');
+  if(logout){logout.onclick=async()=>{await api('/auth/player/logout',{method:'POST'});location.href='/connexion'}};
   if(a.access.isAdmin)$('#developerNav')?.classList.remove('hidden');
   const [fallbackStart,fallbackEnd]=localDate();
   let s=fallbackStart,e=fallbackEnd;
@@ -188,7 +189,7 @@ async function main(){
   state.start=s;state.end=e;
   setText('#periodBadge','PÉRIODE ACTIVE · '+s+' → '+e);setText('#periodBadgeHero',s+' → '+e);
   const canImport=a.access.isAdmin||a.access.permissions.includes('activity_all')||a.access.permissions.includes('all');
-  if(canImport){$('#actions').innerHTML='<div class="flex flex-wrap gap-2"><button id="importButton" class="quota-btn">＋ Importer les interventions</button><button id="clearQuotaButton" class="quota-btn secondary border-red-900/60 text-red-300 hover:border-red-700 hover:bg-red-950/30">🗑 Vider les quotas</button></div>';$('#importButton').onclick=openImport;$('#clearQuotaButton').onclick=clearQuotas}
+  if(canImport){const actions=$('#actions');if(actions)actions.innerHTML='<div class="flex flex-wrap gap-2"><button id="importButton" class="quota-btn">＋ Importer les interventions</button><button id="clearQuotaButton" class="quota-btn secondary border-red-900/60 text-red-300 hover:border-red-700 hover:bg-red-950/30">🗑 Vider les quotas</button></div>';const importButton=$('#importButton'),clearQuotaButton=$('#clearQuotaButton');if(importButton)importButton.onclick=openImport;if(clearQuotaButton)clearQuotaButton.onclick=clearQuotas}
   await load(s,e);
  }catch(e){const content=$('#content');if(content){content.setAttribute('aria-busy','false');content.innerHTML='<div class="ui-error"><b>Impossible de charger l’activité.</b><br><span>'+esc(e.message||'Erreur inconnue')+'</span><button type="button" class="quota-btn secondary" id="retryActivity">Réessayer</button></div>'}$('#retryActivity')?.addEventListener('click',()=>location.reload());}
 }
