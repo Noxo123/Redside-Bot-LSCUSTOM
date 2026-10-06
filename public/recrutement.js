@@ -40,10 +40,10 @@ function renderHistory(){
   '</article>';
  }).join('');
  return '<section class="rh-history mb-6">'+
-   '<button type="button" id="toggleImportHistory" class="rh-history-head" aria-expanded="false">'+
+   '<div class="rh-history-head">'+
      '<div class="rh-history-title"><span class="rh-eyebrow">HISTORIQUE RH</span><h2>Imports enregistrés</h2><p>La date et l’heure correspondent au moment où l’import a été validé et écrit en base.</p></div>'+
-     '<div class="rh-history-head-meta"><span class="rh-history-count">'+rows.length+' '+(rows.length===1?'IMPORT':'IMPORTS')+'</span><span id="importHistoryChevron" class="ls-history-chevron rh-history-chevron">⌄</span></div>'+
-   '</button>'+
+     '<div class="rh-history-head-meta"><span class="rh-history-count">'+rows.length+' '+(rows.length===1?'IMPORT':'IMPORTS')+'</span><button type="button" id="toggleImportHistory" class="rh-history-toggle" aria-expanded="false" aria-controls="importHistoryBody"><span class="rh-history-toggle-icon" aria-hidden="true">⌄</span><span class="rh-history-toggle-label">Dérouler</span></button></div>'+
+   '</div>'+
    '<div id="importHistoryBody" class="ls-history-body is-collapsed"><div><div class="rh-history-list">'+restoreRows+'</div><div class="rh-history-foot"><span>'+completed+' import(s) terminé(s) avec succès</span><span>Historique conservé en base</span></div></div></div>'+
  '</section>';
 }
@@ -97,7 +97,7 @@ function render(){
  '<div class="mb-4 flex flex-wrap items-center justify-between gap-3"><div><div class="text-xs uppercase tracking-[.16em] text-zinc-600">PÉRIODE</div><div class="mt-1 text-sm text-zinc-400">'+state.start+' → '+state.end+'</div></div><input id="quotaSearch" class="w-full max-w-[300px] p-3" placeholder="Rechercher un employé..."></div>'+
  '<div class="quota-table-wrap"><table class="quota-table"><thead><tr><th>Employé</th><th>Quota argent</th><th>Montant fourrière</th><th>Montant personnalisations</th><th>Montant factures</th><th>Fourrières</th><th>Réparations</th><th>Appels</th><th>Personnalisations</th><th>Factures</th><th>Total $</th></tr></thead><tbody>'+rowsHtml+totalRow+'</tbody></table></div>';
  $('#quotaSearch').oninput=e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.quota-table tbody tr[data-name]').forEach(tr=>tr.style.display=tr.dataset.name.toLowerCase().includes(q)?'':'none')};
- const historyToggle=$('#toggleImportHistory'),historyBody=$('#importHistoryBody'),historyChevron=$('#importHistoryChevron');if(historyToggle&&historyBody){historyToggle.setAttribute('aria-expanded','false');historyToggle.onclick=()=>{const expanded=!historyBody.classList.contains('is-collapsed');historyBody.classList.toggle('is-collapsed',expanded);historyToggle.setAttribute('aria-expanded',String(!expanded));historyChevron?.classList.toggle('is-open',!expanded)}}
+ const historyToggle=$('#toggleImportHistory'),historyBody=$('#importHistoryBody');if(historyToggle&&historyBody){const label=historyToggle.querySelector('.rh-history-toggle-label'),icon=historyToggle.querySelector('.rh-history-toggle-icon');historyToggle.onclick=()=>{const open=historyBody.classList.contains('is-collapsed');historyBody.classList.toggle('is-collapsed',!open);historyToggle.setAttribute('aria-expanded',String(open));if(label)label.textContent=open?'Réduire':'Dérouler';if(icon)icon.classList.toggle('is-open',open);historyToggle.classList.toggle('is-open',open)}}
  document.querySelectorAll('[data-import-id]').forEach(btn=>btn.onclick=async()=>{
   const id=Number(btn.dataset.importId);if(!id)return;
   const original=btn.textContent;btn.disabled=true;btn.textContent='Restauration…';
