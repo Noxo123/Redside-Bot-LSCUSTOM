@@ -314,11 +314,7 @@ function openImport(){
  };
 }
 async function clearQuotas(){
- const ok=confirm('⚠️ VIDER LES QUOTAS
-
-Cette action supprime tous les relevés de quotas et tout l’historique des imports pour ce serveur. Les employés, rôles, comptes et réglages seront conservés.
-
-Continuer ?');
+ const ok=confirm(`⚠️ VIDER LES QUOTAS\n\nCette action supprime tous les relevés de quotas et tout l’historique des imports pour ce serveur. Les employés, rôles, comptes et réglages seront conservés.\n\nContinuer ?`);
  if(!ok)return;
  const confirmation=prompt('Pour confirmer définitivement, saisis exactement : VIDER_QUOTAS');
  if(confirmation!=='VIDER_QUOTAS')return window.LSUI?.toast('Action annulée : confirmation incorrecte.','warning','Confirmation');
