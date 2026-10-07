@@ -200,3 +200,26 @@ async function saveRole(e,m){e.preventDefault();const b=Object.fromEntries(new F
 async function delRole(id){if(!confirm('Supprimer ce rôle interne ?'))return;try{await api('/api/developer/hierarchy/'+id,{method:'DELETE'});toast('Rôle supprimé.');load('hierarchy')}catch(x){toast(x.message,false)}}
 async function load(tab){try{D=await api('/api/developer/overview');D.canDeleteData=!!D.canDeleteData;D.discordCandidates=[];D.loginAccounts=(await api('/api/developer/logins')).accounts||[];const userEl=document.querySelector('#user');if(userEl)userEl.textContent='Accès développeur · '+D.guild.name;const guildBadge=document.querySelector('#guildBadge');if(guildBadge)guildBadge.innerHTML='<div class="font-semibold text-white">'+esc(D.guild.name)+'</div><div class="mt-1 font-mono text-xs text-zinc-600">'+D.guild.id+'</div>';render(tab)}catch(e){document.querySelector('#app').innerHTML='<div class="rounded-2xl border border-red-900/50 bg-red-950/20 p-6 text-red-200">'+esc(e.message)+'</div>'}}
 document.querySelector('#logout').onclick=async()=>{await api('/auth/player/logout',{method:'POST'});location.href='/connexion'};load('config');
+
+
+document.querySelector('#demoLogin')?.addEventListener('click', async () => {
+  const button = document.querySelector('#demoLogin');
+  if (!button) return;
+  if (!confirm('Créer/utiliser un compte démo sans aucun droit et ouvrir sa session ?')) return;
+  button.disabled = true;
+  button.textContent = 'Création du compte démo…';
+  try {
+    const response = await fetch('/api/developer/demo-login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'}
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Impossible de créer le compte démo.');
+    location.href = data.redirect || '/dashboard';
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = '🧪 Créer le compte démo et se connecter';
+    alert(error.message);
+  }
+});
