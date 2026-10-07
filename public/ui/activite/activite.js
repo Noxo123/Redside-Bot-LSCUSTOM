@@ -159,8 +159,8 @@ function render(){
  '<div class="mb-4 flex flex-wrap items-center justify-between gap-3"><div><div class="text-xs uppercase tracking-[.16em] text-zinc-600">PÉRIODE</div><div class="mt-1 text-sm text-zinc-400">'+state.start+' → '+state.end+'</div></div><input id="quotaSearch" class="w-full max-w-[300px] p-3" placeholder="Rechercher un employé..."></div>'+
  '<div class="quota-table-wrap"><table class="quota-table"><thead><tr><th>Employé</th><th>Quota argent</th><th>Montant fourrière</th><th>Montant personnalisations</th><th>Montant factures</th><th>Fourrières</th><th>Réparations</th><th>Appels</th><th>Personnalisations</th><th>Factures</th><th>Total $</th></tr></thead><tbody>'+rowsHtml+totalRow+'</tbody></table></div>';
  $('#quotaSearch').oninput=e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.quota-table tbody tr[data-name]').forEach(tr=>tr.style.display=tr.dataset.name.toLowerCase().includes(q)?'':'none')};
- const historyToggle=$('#toggleImportHistory'),historyBody=$('#importHistoryBody'),historyChevron=$('#importHistoryChevron');if(historyToggle&&historyBody)historyToggle.onclick=()=>{const open=historyBody.classList.toggle('hidden');if(historyChevron)historyChevron.style.transform=open?'rotate(0deg)':'rotate(180deg)'};
- document.querySelectorAll('[data-import-id]').forEach(btn=>btn.onclick=async()=>{
+ const historyToggle=$('#toggleImportHistory'),historyBody=$('#importHistoryBody'),historyChevron=$('#importHistoryChevron');if(historyToggle&&historyBody)historyToggle.data-activity-onclick=()=>{const open=historyBody.classList.toggle('hidden');if(historyChevron)historyChevron.style.transform=open?'rotate(0deg)':'rotate(180deg)'};
+ document.querySelectorAll('[data-import-id]').forEach(btn=>btn.data-activity-onclick=async()=>{
   const id=Number(btn.dataset.importId);if(!id)return;
   const original=btn.textContent;btn.disabled=true;btn.textContent='Restauration…';
   try{
@@ -171,8 +171,8 @@ function render(){
   }catch(e){window.LSUI?.toast(e.message||'Impossible de restaurer cette sauvegarde.','error','Restauration');}
   finally{btn.disabled=false;btn.textContent=original}
 });
- $('#copyPodium').onclick=async()=>{try{await navigator.clipboard.writeText(iframeCode);$('#copyPodium').textContent='✓ Iframe copié';setTimeout(()=>$('#copyPodium').textContent='Copier l\'iframe',1800)}catch{window.LSUI?.toast('Impossible de copier automatiquement. Utilise le code affiché ci-dessous.','error','Copie')}};
- $('#imagePodium').onclick=async()=>{
+ $('#copyPodium').data-activity-onclick=async()=>{try{await navigator.clipboard.writeText(iframeCode);$('#copyPodium').textContent='✓ Iframe copié';setTimeout(()=>$('#copyPodium').textContent='Copier l\'iframe',1800)}catch{window.LSUI?.toast('Impossible de copier automatiquement. Utilise le code affiché ci-dessous.','error','Copie')}};
+ $('#imagePodium').data-activity-onclick=async()=>{
    const btn=$('#imagePodium'),frame=document.querySelector('.podium-preview iframe');
    if(!frame)return;
    btn.disabled=true;btn.textContent='⏳ Génération...';
@@ -243,13 +243,14 @@ function openImport(){
  };
  rawInput.addEventListener('input',updateCount);
  document.addEventListener('keydown',onKey);
- closeBtn.onclick=close;
- cancel.onclick=close;
- finish.onclick=()=>{document.removeEventListener('keydown',onKey);root?.remove()};
- root.addEventListener('click',e=>{if(e.target===root&&!send.disabled)close()});\n window.requestAnimationFrame(()=>root?.classList.add('is-ready'));
+ closeBtn.data-activity-onclick=close;
+ cancel.data-activity-onclick=close;
+ finish.data-activity-onclick=()=>{document.removeEventListener('keydown',onKey);root?.remove()};
+ root.addEventListener('click',e=>{if(e.target===root&&!send.disabled)close()});
+ window.requestAnimationFrame(()=>root?.classList.add('is-ready'));
  updateCount();
 
- send.onclick=async()=>{
+ send.data-activity-onclick=async()=>{
    const err=$('#importError');
    const periodStart=startInput.value,periodEnd=endInput.value,raw=rawInput.value.trim();
    err.textContent='';
@@ -313,7 +314,11 @@ function openImport(){
  };
 }
 async function clearQuotas(){
- const ok=confirm('⚠️ VIDER LES QUOTAS\n\nCette action supprime tous les relevés de quotas et tout l’historique des imports pour ce serveur. Les employés, rôles, comptes et réglages seront conservés.\n\nContinuer ?');
+ const ok=confirm('⚠️ VIDER LES QUOTAS
+
+Cette action supprime tous les relevés de quotas et tout l’historique des imports pour ce serveur. Les employés, rôles, comptes et réglages seront conservés.
+
+Continuer ?');
  if(!ok)return;
  const confirmation=prompt('Pour confirmer définitivement, saisis exactement : VIDER_QUOTAS');
  if(confirmation!=='VIDER_QUOTAS')return window.LSUI?.toast('Action annulée : confirmation incorrecte.','warning','Confirmation');
@@ -342,7 +347,7 @@ async function main(){
   const userRole=(a.access.roles||[]).map(x=>x.name).filter(Boolean).join(' • ')||'Employé';
   const userBox=$('#user');if(userBox)userBox.innerHTML='<span class="ls-sidebar-avatar" aria-hidden="true">'+esc(userName.slice(0,2).toUpperCase())+'</span><span class="ls-sidebar-user-copy"><strong>'+esc(userName)+'</strong><small>'+esc(userRole)+'</small></span>';
   const logout=$('#logout');
-  if(logout){logout.onclick=async()=>{await api('/auth/player/logout',{method:'POST'});location.href='/connexion'}};
+  if(logout){logout.data-activity-onclick=async()=>{await api('/auth/player/logout',{method:'POST'});location.href='/connexion'}};
   if(a.access.isAdmin)$('#developerNav')?.classList.remove('hidden');
   const [fallbackStart,fallbackEnd]=localDate();
   let s=fallbackStart,e=fallbackEnd;
@@ -362,7 +367,7 @@ async function main(){
     actions.innerHTML=canImport
       ? '<div class="flex flex-wrap gap-2"><button type="button" id="importButton" class="quota-btn" data-quota-action="import">＋ Importer les interventions</button><button type="button" id="clearQuotaButton" class="quota-btn secondary border-red-900/60 text-zinc-200" data-quota-action="clear">🗑 Vider les quotas</button></div>'
       : '';
-    actions.onclick=e=>{
+    actions.data-activity-onclick=e=>{
       const btn=e.target.closest('[data-quota-action]');
       if(!btn)return;
       e.preventDefault();
@@ -374,3 +379,5 @@ async function main(){
  }catch(e){const content=$('#content');if(content){content.setAttribute('aria-busy','false');content.innerHTML='<div class="ui-error"><b>Impossible de charger l’activité.</b><br><span>'+esc(e.message||'Erreur inconnue')+'</span><button type="button" class="quota-btn secondary" id="retryActivity">Réessayer</button></div>'}$('#retryActivity')?.addEventListener('click',()=>location.reload());}
 }
 main();
+/* CSP-safe delegated actions for activity-generated markup. */
+(()=>{const root=document;root.addEventListener('click',e=>{const el=e.target.closest('[data-activity-onclick]');if(!el)return;const code=el.getAttribute('data-activity-onclick')||'';const m=code.match(/^([A-Za-z_$][\\w$]*)\\((.*)\\)$/s);if(!m)return;const fn=window[m[1]];if(typeof fn!=='function')return;e.preventDefault();fn(...m[2].split(',').map(x=>{x=x.trim();if(x==='this')return el;if(/^['"].*['"]$/.test(x))return x.slice(1,-1);if(/^\\d+$/.test(x))return Number(x);return x}))})})();
