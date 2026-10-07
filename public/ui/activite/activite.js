@@ -170,7 +170,7 @@ function render(){
     await load(start,end);
   }catch(e){window.LSUI?.toast(e.message||'Impossible de restaurer cette sauvegarde.','error','Restauration');}
   finally{btn.disabled=false;btn.textContent=original}
-});
+}));
  $('#copyPodium')?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(iframeCode);$('#copyPodium').textContent='✓ Iframe copié';setTimeout(()=>$('#copyPodium').textContent='Copier l\'iframe',1800)}catch{window.LSUI?.toast('Impossible de copier automatiquement. Utilise le code affiché ci-dessous.','error','Copie')}};
  $('#imagePodium')?.addEventListener('click',async()=>{
    const btn=$('#imagePodium'),frame=document.querySelector('.podium-preview iframe');
