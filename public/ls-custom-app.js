@@ -61,6 +61,21 @@ const clock=top.querySelector('#lsClock');const tick=()=>{if(clock)clock.textCon
  const logout=()=>{if(window.__LS_IMPERSONATION)return fetch('/api/developer/impersonation/stop',{method:'POST',credentials:'same-origin'}).then(()=>location.href='/developpeur');return api('/auth/player/logout',{method:'POST'}).finally(()=>location.href='/connexion')};top.querySelector('#profileLogout').onclick=logout;
 }
 async function init(){try{const r=await api('/api/session/access');window.__LS_ACCESS=r.access;window.__LS_IMPERSONATION=r.impersonation||null;shell(r.access,r.user||{});document.documentElement.classList.add('ls-ready')}catch(e){if(path!=='/connexion')location.href='/connexion'}}init()})();
+/* Global loading lifecycle: loading indicators disappear once page data is ready. */
+window.LSUI=window.LSUI||{};
+window.LSUI.finishLoading=()=>{
+  document.documentElement.classList.add('ls-loading-complete');
+  document.querySelectorAll('.ls-page-progress').forEach(el=>{el.style.width='100%';el.style.opacity='0';setTimeout(()=>el.remove(),260)});
+  document.querySelectorAll('[aria-busy="false"] .activity-spinner,[aria-busy="false"] .agenda-spinner').forEach(el=>el.closest('.activity-loading,.agenda-loading-state')?.classList.add('ls-loading-hidden'));
+  document.querySelectorAll('.dev-loading').forEach(el=>{if(!el.closest('#app')||el.closest('#app')?.querySelector(':scope > *:not(.dev-loading)'))el.classList.add('ls-loading-hidden')});
+};
+function watchLoadingLifecycle(){
+  const done=()=>window.LSUI?.finishLoading?.();
+  const observer=new MutationObserver(done);
+  observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-busy']});
+  setTimeout(done,0);
+}
+
 /* Global LS CUSTOM UX enhancements */
 window.LSUI=window.LSUI||{};
 window.LSUI.toast=(message,type='success',title=type==='error'?'Erreur':'LS CUSTOM')=>{
@@ -82,4 +97,4 @@ function enhance(){
    el.addEventListener('input',()=>el.classList.toggle('has-value',!!el.value));
  });
 }
-document.addEventListener('DOMContentLoaded',()=>{setTimeout(enhance,50);new MutationObserver(()=>enhance()).observe(document.body,{childList:true,subtree:true})});
+document.addEventListener('DOMContentLoaded',()=>{setTimeout(enhance,50);watchLoadingLifecycle();new MutationObserver(()=>enhance()).observe(document.body,{childList:true,subtree:true})});
