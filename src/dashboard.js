@@ -103,6 +103,16 @@ app.use((req,res,next)=>{
   res.setHeader('Referrer-Policy','no-referrer');
   res.setHeader('Permissions-Policy','camera=(),microphone=(),geolocation=()');
   res.setHeader('Cross-Origin-Opener-Policy','same-origin');
+  // Never cache authenticated HTML shells. This prevents Cloudflare/browser caches from serving
+  // an older page that still contains removed inline scripts or stale asset references.
+  if(req.method==='GET' && !req.path.startsWith('/api/') && !req.path.startsWith('/uploads/')){
+    const accept=String(req.get('accept')||'');
+    if(accept.includes('text/html') || ['/','/dashboard','/equipe','/activite','/partenariats','/annonces','/messagerie','/agenda','/developpeur','/developpeur/monitoring','/pilotage','/suivi'].includes(req.path)){
+      res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma','no-cache');
+      res.setHeader('Expires','0');
+    }
+  }
   if(req.path.startsWith('/auth/')||req.path.startsWith('/api/')){res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');res.setHeader('Pragma','no-cache');res.setHeader('Expires','0')}
   if(process.env.NODE_ENV==='production')res.setHeader('Strict-Transport-Security','max-age=31536000; includeSubDomains');
   if(['POST','PUT','PATCH','DELETE'].includes(req.method)){
